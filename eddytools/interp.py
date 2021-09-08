@@ -579,15 +579,15 @@ def update_data(data_int, var_int, var):
     if 'time' in var_int.dims:
         if 'z' in var_int.dims:
             data_int_out = data_int.update({var: (['time', 'z', 'lat', 'lon'],
-                                                  var_int)})
+                                                  var_int.data)})
         else:
             data_int_out = data_int.update({var: (['time', 'lat', 'lon'],
-                                                  var_int)})
+                                                  var_int.data)})
     else:
         if 'z' in var_int.dims:
             data_int_out = data_int.update({var: (['z', 'lat', 'lon'],
-                                                  var_int)})
+                                                  var_int.data)})
         else:
             data_int_out = data_int.update({var: (['lat', 'lon'],
-                                                  var_int)})
+                                                  var_int.data)})
     return data_int_out
