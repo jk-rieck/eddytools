@@ -274,7 +274,7 @@ def write_to_netcdf(file_name, sample, sample_param, data):
                                                        + '_sec_lon']))])
     out_nc = xr.Dataset({'time': ('time', sample['time']),
                          'points': ('points', np.arange(0, max_points)),
-                         'depth': ('depth', data['z']),
+                         'depth': ('depth', data['z'].data),
                          'sec_index': ('sec_index', np.arange(0, max_sec))})
     out_nc = out_nc.set_coords(['time', 'points', 'depth', 'sec_index'])
 
