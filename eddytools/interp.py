@@ -437,7 +437,7 @@ def create_empty_ds(data, int_param, lon, lat, t):
             z_dim = data['z_c']
             data_int = xr.Dataset({'time': ('time', data[t].sel({t:
                                                 slice(int_param['start_time'],
-                                                int_param['end_time'])})),
+                                                int_param['end_time'])}).data),
                                    'z': ('z', z_dim),
                                    'lat': ('lat', lat),
                                    'lon': ('lon', lon), })
@@ -446,7 +446,7 @@ def create_empty_ds(data, int_param, lon, lat, t):
             z_dim = data['z_l']
             data_int = xr.Dataset({'time': ('time', data[t].sel({t:
                                                 slice(int_param['start_time'],
-                                                int_param['end_time'])})),
+                                                int_param['end_time'])}).data),
                                    'z': ('z', z_dim),
                                    'lat': ('lat', lat),
                                    'lon': ('lon', lon), })
@@ -454,7 +454,7 @@ def create_empty_ds(data, int_param, lon, lat, t):
         else:
             data_int = xr.Dataset({'time': ('time', data[t].sel({t:
                                                 slice(int_param['start_time'],
-                                                int_param['end_time'])})),
+                                                int_param['end_time'])}).data),
                                    'lat': ('lat', lat),
                                    'lon': ('lon', lon), })
             data_int = data_int.set_coords(['time', 'lat', 'lon'])
@@ -463,7 +463,7 @@ def create_empty_ds(data, int_param, lon, lat, t):
     elif int_param['model'] == 'MITgcm':
         data_int = xr.Dataset({'time': ('time', data[t].sel({t:
                                                 slice(int_param['start_time'],
-                                                int_param['end_time'])})),
+                                                int_param['end_time'])}).data),
                                'z': ('z', data['Z']),
                                'lat': ('lat', lat),
                                'lon': ('lon', lon), })
