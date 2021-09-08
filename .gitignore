@@ -1,0 +1,8 @@
+__pycache__
+convert_md_to_pdf
+eddytools.egg-info
+head.tex
+missfont.log
+run_test.sh
+*.nc
+*.pickle
