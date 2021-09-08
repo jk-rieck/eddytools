@@ -434,7 +434,7 @@ def create_empty_ds(data, int_param, lon, lat, t):
         if 'z_c' in data.dims:
             # Detect whether the data has a depth dimension and construct the
             # dataset accordingly
-            z_dim = data['z_c']
+            z_dim = data['z_c'].data
             data_int = xr.Dataset({'time': ('time', data[t].sel({t:
                                                 slice(int_param['start_time'],
                                                 int_param['end_time'])}).data),
@@ -443,7 +443,7 @@ def create_empty_ds(data, int_param, lon, lat, t):
                                    'lon': ('lon', lon), })
             data_int = data_int.set_coords(['time', 'z', 'lat', 'lon'])
         elif 'z_l' in data.dims:
-            z_dim = data['z_l']
+            z_dim = data['z_l'].data
             data_int = xr.Dataset({'time': ('time', data[t].sel({t:
                                                 slice(int_param['start_time'],
                                                 int_param['end_time'])}).data),
