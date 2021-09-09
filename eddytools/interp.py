@@ -437,36 +437,36 @@ def create_empty_ds(data, int_param, lon, lat, t):
             z_dim = data['z_c']
             data_int = xr.Dataset({'time': ('time', data[t].sel({t:
                                                 slice(int_param['start_time'],
-                                                int_param['end_time'])})),
-                                   'z': ('z', z_dim),
-                                   'lat': ('lat', lat),
-                                   'lon': ('lon', lon), })
+                                                int_param['end_time'])}).data),
+                                   'z': ('z', z_dim.data),
+                                   'lat': ('lat', lat.data),
+                                   'lon': ('lon', lon.data), })
             data_int = data_int.set_coords(['time', 'z', 'lat', 'lon'])
         elif 'z_l' in data.dims:
             z_dim = data['z_l']
             data_int = xr.Dataset({'time': ('time', data[t].sel({t:
                                                 slice(int_param['start_time'],
-                                                int_param['end_time'])})),
-                                   'z': ('z', z_dim),
-                                   'lat': ('lat', lat),
-                                   'lon': ('lon', lon), })
+                                                int_param['end_time'])}).data),
+                                   'z': ('z', z_dim.data),
+                                   'lat': ('lat', lat.data),
+                                   'lon': ('lon', lon.data), })
             data_int = data_int.set_coords(['time', 'z', 'lat', 'lon'])
         else:
             data_int = xr.Dataset({'time': ('time', data[t].sel({t:
                                                 slice(int_param['start_time'],
-                                                int_param['end_time'])})),
-                                   'lat': ('lat', lat),
-                                   'lon': ('lon', lon), })
+                                                int_param['end_time'])}).data),
+                                   'lat': ('lat', lat.data),
+                                   'lon': ('lon', lon.data), })
             data_int = data_int.set_coords(['time', 'lat', 'lon'])
     # The MITgcm output always has a depth dimension, thus no checks are
     # necessary
     elif int_param['model'] == 'MITgcm':
         data_int = xr.Dataset({'time': ('time', data[t].sel({t:
                                                 slice(int_param['start_time'],
-                                                int_param['end_time'])})),
-                               'z': ('z', data['Z']),
-                               'lat': ('lat', lat),
-                               'lon': ('lon', lon), })
+                                                int_param['end_time'])}).data),
+                               'z': ('z', data['Z'].data),
+                               'lat': ('lat', lat.data),
+                               'lon': ('lon', lon.data), })
     return data_int
 
 
@@ -579,15 +579,15 @@ def update_data(data_int, var_int, var):
     if 'time' in var_int.dims:
         if 'z' in var_int.dims:
             data_int_out = data_int.update({var: (['time', 'z', 'lat', 'lon'],
-                                                  var_int)})
+                                                  var_int.data)})
         else:
             data_int_out = data_int.update({var: (['time', 'lat', 'lon'],
-                                                  var_int)})
+                                                  var_int.data)})
     else:
         if 'z' in var_int.dims:
             data_int_out = data_int.update({var: (['z', 'lat', 'lon'],
-                                                  var_int)})
+                                                  var_int.data)})
         else:
             data_int_out = data_int.update({var: (['lat', 'lon'],
-                                                  var_int)})
+                                                  var_int.data)})
     return data_int_out
