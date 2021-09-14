@@ -442,18 +442,24 @@ def sample_core(track, data, data_whole, sample_param, i, j,
         time1 = np.array(track['time'])
     this_year = int(str(data['time'][-1].values)[0:4])
     diff_year = int(str(time1)[0:4]) - this_year
+    if sample_param['grid'] == 'latlon':
+        addlon = 2
+        addlat = 1
+    elif sample_param['grid'] == 'cartesian':
+        addlon = 2e5
+        addlat = 1e5
     lon1 = int(np.argmin(((data_whole['lon']
-               - (sample_param['lon1'] - 2)) ** 2).values))
+               - (sample_param['lon1'] - addlon)) ** 2).values))
     lon2 = int(np.argmin(((data_whole['lon']
-               - (sample_param['lon2'] + 2)) ** 2).values))
+               - (sample_param['lon2'] + addlon)) ** 2).values))
     lat1 = int(np.argmin(((data_whole['lat']
-               - (sample_param['lat1'] - 1)) ** 2).values))
+               - (sample_param['lat1'] - addlat)) ** 2).values))
     lat2 = int(np.argmin(((data_whole['lat']
-               - (sample_param['lat2'] + 1)) ** 2).values))
+               - (sample_param['lat2'] + addlat)) ** 2).values))
     lon10 = int(np.argmin(((data['lon']
-               - (sample_param['lon1'] - 2)) ** 2).values))
+               - (sample_param['lon1'] - addlon)) ** 2).values))
     lat10 = int(np.argmin(((data['lat']
-               - (sample_param['lat1'] - 1)) ** 2).values))
+               - (sample_param['lat1'] - addlat)) ** 2).values))
     # load next years data, if necessary
     if (int(str(time1)[0:4]) > this_year) & (time1 <= end_time):
         this_year = this_year + diff_year
