@@ -496,8 +496,10 @@ def sample_core(track, data, data_whole, sample_param, i, j,
                            'lon': 100, 'lat': 100}).compute()
     # drop already used years if they are not needed anymore
     if int(str(data['time'][0].values)[0:4]) < int(str(time0)[0:4]):
-        range_start = str(int(str(data['time'][0].values)[0:4]) + 1) + '-01-01'
-        range_end = str(int(str(end_time)[0:4])) + last_day
+        range_start =\
+            (str(f'{int(str(computed_data["time"][0].values)[0:4]) + 1:04d}')
+            + '-01-01')
+        range_end = str(f'{int(str(end_time)[0:4]):04d}') + last_day
         data = data.sel(time=slice(range_start, range_end)).compute()
     # determine lon and lat of eddy
     lon_for_sel = track['lon'][0]
