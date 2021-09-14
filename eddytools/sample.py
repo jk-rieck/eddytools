@@ -810,17 +810,14 @@ def sample(tracks, data, sample_param):
             i_before = i
             # only consider tracks that are shorter than max_time
             if len(tracks[ed]['time']) < sample_param['max_time']:
-                try:
-                    sample, i, j, computed_data = sample_core(tracks[ed],
-                                                              computed_data,
-                                                              data,
-                                                              sample_param,
-                                                              i, j,
-                                                              lifetime,
-                                                              start_time,
-                                                              end_time)
-                except:
-                    pass
+                sample, i, j, computed_data = sample_core(tracks[ed],
+                                                          computed_data,
+                                                          data,
+                                                          sample_param,
+                                                          i, j,
+                                                          lifetime,
+                                                          start_time,
+                                                          end_time)
             if i_before == i - 1:
                 e_num = "%07d" % (i,)
                 file_name = (sample_param['save_location']
