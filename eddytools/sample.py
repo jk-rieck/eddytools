@@ -457,15 +457,15 @@ def sample_core(track, data, data_whole, sample_param, i, j,
     # load next years data, if necessary
     if (int(str(time1)[0:4]) > this_year) & (time1 <= end_time):
         this_year = this_year + diff_year
-        range_start = str(int(
-                          str(data['time'][-1].values)[0:4]) + 1) + '-01-01'
+        range_start = str(f'{int(str(computed_data["time"][-1].values)[0:4])
+                          + 1:04d}') + '-01-01'
         if sample_param['calendar'] == 'standard':
             last_day = '-12-31'
             time_chunk = 73
         elif sample_param['calendar'] == '360_day':
             last_day = '-12-30'
             time_chunk = 72
-        range_end = str(this_year) + last_day
+        range_end = str(f'{this_year:04d}') + last_day
         vars_to_compute = sample_param['sample_vars']
         if sample_param['range']:
             vars_to_compute.append(sample_param['var_range'][0])
