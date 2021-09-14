@@ -458,8 +458,8 @@ def sample_core(track, data, data_whole, sample_param, i, j,
     if (int(str(time1)[0:4]) > this_year) & (time1 <= end_time):
         this_year = this_year + diff_year
         range_start =\
-            str(f'{int(str(computed_data["time"][-1].values)[0:4]) + 1:04d}')
-            + '-01-01'
+            (str(f'{int(str(computed_data["time"][-1].values)[0:4]) + 1:04d}')
+            + '-01-01')
         if sample_param['calendar'] == 'standard':
             last_day = '-12-31'
             time_chunk = 73
