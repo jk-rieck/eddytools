@@ -460,7 +460,7 @@ def sample_core(track, data, data_whole, sample_param, i, j,
     if (int(str(time1)[0:4]) > this_year) & (time1 <= end_time):
         this_year = this_year + diff_year
         range_start =\
-            (str(f'{int(str(computed_data["time"][-1].values)[0:4]) + 1:04d}')
+            (str(f'{int(str(data["time"][-1].values)[0:4]) + 1:04d}')
             + '-01-01')
         if sample_param['calendar'] == 'standard':
             last_day = '-12-31'
@@ -499,7 +499,7 @@ def sample_core(track, data, data_whole, sample_param, i, j,
     # drop already used years if they are not needed anymore
     if int(str(data['time'][0].values)[0:4]) < int(str(time0)[0:4]):
         range_start =\
-            (str(f'{int(str(computed_data["time"][0].values)[0:4]) + 1:04d}')
+            (str(f'{int(str(data["time"][0].values)[0:4]) + 1:04d}')
             + '-01-01')
         range_end = str(f'{int(str(end_time)[0:4]):04d}') + last_day
         data = data.sel(time=slice(range_start, range_end)).compute()
