@@ -689,13 +689,13 @@ def prepare(data_in, sample_param, tracks):
     elif sample_param['grid'] == 'cartesian':
         addlon = 2e5
         addlat = 1e5
-    lon1 = int(np.argmin(((data_whole['lon']
+    lon1 = int(np.argmin(((data_in['lon']
                - (sample_param['lon1'] - addlon)) ** 2).values))
-    lon2 = int(np.argmin(((data_whole['lon']
+    lon2 = int(np.argmin(((data_in['lon']
                - (sample_param['lon2'] + addlon)) ** 2).values))
-    lat1 = int(np.argmin(((data_whole['lat']
+    lat1 = int(np.argmin(((data_in['lat']
                - (sample_param['lat1'] - addlat)) ** 2).values))
-    lat2 = int(np.argmin(((data_whole['lat']
+    lat2 = int(np.argmin(((data_in['lat']
                - (sample_param['lat2'] + addlat)) ** 2).values))
     vars_to_compute = sample_param['sample_vars']
     if sample_param['range']:
