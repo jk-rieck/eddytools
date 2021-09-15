@@ -440,6 +440,12 @@ def sample_core(track, data, data_whole, sample_param, i, j,
         length = 1
         time0 = np.array(track['time'])
         time1 = np.array(track['time'])
+    if sample_param['calendar'] == 'standard':
+        last_day = '-12-31'
+        time_chunk = 73
+    elif sample_param['calendar'] == '360_day':
+        last_day = '-12-30'
+        time_chunk = 72
     this_year = int(str(data['time'][-1].values)[0:4])
     diff_year = int(str(time1)[0:4]) - this_year
     if sample_param['grid'] == 'latlon':
@@ -462,12 +468,6 @@ def sample_core(track, data, data_whole, sample_param, i, j,
         range_start =\
             (str(f'{int(str(data["time"][-1].values)[0:4]) + 1:04d}')
             + '-01-01')
-        if sample_param['calendar'] == 'standard':
-            last_day = '-12-31'
-            time_chunk = 73
-        elif sample_param['calendar'] == '360_day':
-            last_day = '-12-30'
-            time_chunk = 72
         range_end = str(f'{this_year:04d}') + last_day
         vars_to_compute = sample_param['sample_vars']
         if sample_param['range']:
