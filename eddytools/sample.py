@@ -683,14 +683,20 @@ def prepare(data_in, sample_param, tracks):
                                       int(sample_param['end_time'][5:7]),
                                       int(sample_param['end_time'][8:10]))
         last_day = '-12-30'
-    lon1 = int(np.argmin(((data_in['lon']
-               - (sample_param['lon1'] - 2)) ** 2).values))
-    lon2 = int(np.argmin(((data_in['lon']
-               - (sample_param['lon2'] + 2)) ** 2).values))
-    lat1 = int(np.argmin(((data_in['lat']
-               - (sample_param['lat1'] - 1)) ** 2).values))
-    lat2 = int(np.argmin(((data_in['lat']
-               - (sample_param['lat2'] + 1)) ** 2).values))
+    if sample_param['grid'] == 'latlon':
+        addlon = 2
+        addlat = 1
+    elif sample_param['grid'] == 'cartesian':
+        addlon = 2e5
+        addlat = 1e5
+    lon1 = int(np.argmin(((data_whole['lon']
+               - (sample_param['lon1'] - addlon)) ** 2).values))
+    lon2 = int(np.argmin(((data_whole['lon']
+               - (sample_param['lon2'] + addlon)) ** 2).values))
+    lat1 = int(np.argmin(((data_whole['lat']
+               - (sample_param['lat1'] - addlat)) ** 2).values))
+    lat2 = int(np.argmin(((data_whole['lat']
+               - (sample_param['lat2'] + addlat)) ** 2).values))
     vars_to_compute = sample_param['sample_vars']
     if sample_param['range']:
         vars_to_compute.append(sample_param['var_range'][0])
