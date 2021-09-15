@@ -9,7 +9,7 @@ import xarray as xr
 import cftime as cft
 
 
-def add_fields(sampled, interpolated, sample_param, var, lon10, lat10):
+def add_fields(sampled, interpolated, sample_param, var, lon1, lat1):
     """Add variable fields to the sampled eddies in `sampled`.
 
     Parameters
@@ -58,12 +58,12 @@ def add_fields(sampled, interpolated, sample_param, var, lon10, lat10):
             }
     var : str
         Name of the variable to add to `sampled[i]`
-    lon10 : int
+    lon1 : int
         Integer describing how far the first index in i-direction is from the
         i=0 in the original fields
-    lat10 : int
+    lat1 : int
         Integer describing how far the first index in j-direction is from the
-        ji=0 in the original fields
+        j=0 in the original fields
 
     Returns
     -------
@@ -92,8 +92,8 @@ def add_fields(sampled, interpolated, sample_param, var, lon10, lat10):
         else:
             time = sampled['time'][t]
         # get the indeces to use for extraction from `interpolated`
-        indeces = np.vstack((sampled['eddy_i'][t] + (lon10),
-                             sampled['eddy_j'][t] + (lat10)))
+        indeces = np.vstack((sampled['eddy_i'][t] - (lon1),
+                             sampled['eddy_j'][t] - (lat1)))
         t_index = np.min(np.where(interpolated['time'].values >= time))
         lon_index = xr.DataArray(indeces[0, :], dims=['lon'])
         lat_index = xr.DataArray(indeces[1, :], dims=['lat'])
@@ -456,10 +456,6 @@ def sample_core(track, data, data_whole, sample_param, i, j,
                - (sample_param['lat1'] - addlat)) ** 2).values))
     lat2 = int(np.argmin(((data_whole['lat']
                - (sample_param['lat2'] + addlat)) ** 2).values))
-    lon10 = int(np.argmin(((data['lon']
-               - (sample_param['lon1'] - addlon)) ** 2).values))
-    lat10 = int(np.argmin(((data['lat']
-               - (sample_param['lat1'] - addlat)) ** 2).values))
     # load next years data, if necessary
     if (int(str(time1)[0:4]) > this_year) & (time1 <= end_time):
         this_year = this_year + diff_year
@@ -565,7 +561,7 @@ def sample_core(track, data, data_whole, sample_param, i, j,
             sampled = track.copy()
             for variable in sample_param['sample_vars']:
                 sampled = add_fields(sampled, data, sample_param, variable,
-                                     lon10, lat10)
+                                     lon1, lat1)
             i = i + 1
         elif conditions_are_met & (vars_split_ed
                                    >= sample_param['value_split'][0]):
@@ -573,14 +569,14 @@ def sample_core(track, data, data_whole, sample_param, i, j,
             sampled = track.copy()
             for variable in sample_param['sample_vars']:
                 sampled = add_fields(sampled, data, sample_param, variable,
-                                     lon10, lat10)
+                                     lon1, lat1)
             j = j + 1
     else:
         if conditions_are_met:
             sampled = track.copy()
             for variable in sample_param['sample_vars']:
                 sampled = add_fields(sampled, data, sample_param, variable,
-                                     lon10, lat10)
+                                     lon1, lat1)
             i = i + 1
     if sample_param['split']:
         return sampled, i, j, data, ab
