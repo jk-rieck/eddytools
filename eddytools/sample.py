@@ -9,7 +9,7 @@ import xarray as xr
 import cftime as cft
 
 
-def add_fields(sampled, interpolated, sample_param, var, lon10, lat10):
+def add_fields(sampled, interpolated, sample_param, var, lon1, lat1):
     """Add variable fields to the sampled eddies in `sampled`.
 
     Parameters
@@ -58,12 +58,12 @@ def add_fields(sampled, interpolated, sample_param, var, lon10, lat10):
             }
     var : str
         Name of the variable to add to `sampled[i]`
-    lon10 : int
+    lon1 : int
         Integer describing how far the first index in i-direction is from the
         i=0 in the original fields
-    lat10 : int
+    lat1 : int
         Integer describing how far the first index in j-direction is from the
-        ji=0 in the original fields
+        j=0 in the original fields
 
     Returns
     -------
@@ -92,8 +92,8 @@ def add_fields(sampled, interpolated, sample_param, var, lon10, lat10):
         else:
             time = sampled['time'][t]
         # get the indeces to use for extraction from `interpolated`
-        indeces = np.vstack((sampled['eddy_i'][t] + (lon10),
-                             sampled['eddy_j'][t] + (lat10)))
+        indeces = np.vstack((sampled['eddy_i'][t] - (lon1),
+                             sampled['eddy_j'][t] - (lat1)))
         t_index = np.min(np.where(interpolated['time'].values >= time))
         lon_index = xr.DataArray(indeces[0, :], dims=['lon'])
         lat_index = xr.DataArray(indeces[1, :], dims=['lat'])
@@ -440,32 +440,35 @@ def sample_core(track, data, data_whole, sample_param, i, j,
         length = 1
         time0 = np.array(track['time'])
         time1 = np.array(track['time'])
+    if sample_param['calendar'] == 'standard':
+        last_day = '-12-31'
+        time_chunk = 73
+    elif sample_param['calendar'] == '360_day':
+        last_day = '-12-30'
+        time_chunk = 72
     this_year = int(str(data['time'][-1].values)[0:4])
     diff_year = int(str(time1)[0:4]) - this_year
+    if sample_param['grid'] == 'latlon':
+        addlon = 2
+        addlat = 1
+    elif sample_param['grid'] == 'cartesian':
+        addlon = 2e5
+        addlat = 1e5
     lon1 = int(np.argmin(((data_whole['lon']
-               - (sample_param['lon1'] - 2)) ** 2).values))
+               - (sample_param['lon1'] - addlon)) ** 2).values))
     lon2 = int(np.argmin(((data_whole['lon']
-               - (sample_param['lon2'] + 2)) ** 2).values))
+               - (sample_param['lon2'] + addlon)) ** 2).values))
     lat1 = int(np.argmin(((data_whole['lat']
-               - (sample_param['lat1'] - 1)) ** 2).values))
+               - (sample_param['lat1'] - addlat)) ** 2).values))
     lat2 = int(np.argmin(((data_whole['lat']
-               - (sample_param['lat2'] + 1)) ** 2).values))
-    lon10 = int(np.argmin(((data['lon']
-               - (sample_param['lon1'] - 2)) ** 2).values))
-    lat10 = int(np.argmin(((data['lat']
-               - (sample_param['lat1'] - 1)) ** 2).values))
+               - (sample_param['lat2'] + addlat)) ** 2).values))
     # load next years data, if necessary
     if (int(str(time1)[0:4]) > this_year) & (time1 <= end_time):
         this_year = this_year + diff_year
-        range_start = str(int(
-                          str(data['time'][-1].values)[0:4]) + 1) + '-01-01'
-        if sample_param['calendar'] == 'standard':
-            last_day = '-12-31'
-            time_chunk = 73
-        elif sample_param['calendar'] == '360_day':
-            last_day = '-12-30'
-            time_chunk = 72
-        range_end = str(this_year) + last_day
+        range_start =\
+            (str(f'{int(str(data["time"][-1].values)[0:4]) + 1:04d}')
+            + '-01-01')
+        range_end = str(f'{this_year:04d}') + last_day
         vars_to_compute = sample_param['sample_vars']
         if sample_param['range']:
             vars_to_compute.append(sample_param['var_range'][0])
@@ -495,8 +498,10 @@ def sample_core(track, data, data_whole, sample_param, i, j,
                            'lon': 100, 'lat': 100}).compute()
     # drop already used years if they are not needed anymore
     if int(str(data['time'][0].values)[0:4]) < int(str(time0)[0:4]):
-        range_start = str(int(str(data['time'][0].values)[0:4]) + 1) + '-01-01'
-        range_end = str(int(str(end_time)[0:4])) + last_day
+        range_start =\
+            (str(f'{int(str(data["time"][0].values)[0:4]) + 1:04d}')
+            + '-01-01')
+        range_end = str(f'{int(str(end_time)[0:4]):04d}') + last_day
         data = data.sel(time=slice(range_start, range_end)).compute()
     # determine lon and lat of eddy
     lon_for_sel = track['lon'][0]
@@ -556,7 +561,7 @@ def sample_core(track, data, data_whole, sample_param, i, j,
             sampled = track.copy()
             for variable in sample_param['sample_vars']:
                 sampled = add_fields(sampled, data, sample_param, variable,
-                                     lon10, lat10)
+                                     lon1, lat1)
             i = i + 1
         elif conditions_are_met & (vars_split_ed
                                    >= sample_param['value_split'][0]):
@@ -564,14 +569,14 @@ def sample_core(track, data, data_whole, sample_param, i, j,
             sampled = track.copy()
             for variable in sample_param['sample_vars']:
                 sampled = add_fields(sampled, data, sample_param, variable,
-                                     lon10, lat10)
+                                     lon1, lat1)
             j = j + 1
     else:
         if conditions_are_met:
             sampled = track.copy()
             for variable in sample_param['sample_vars']:
                 sampled = add_fields(sampled, data, sample_param, variable,
-                                     lon10, lat10)
+                                     lon1, lat1)
             i = i + 1
     if sample_param['split']:
         return sampled, i, j, data, ab
@@ -674,14 +679,20 @@ def prepare(data_in, sample_param, tracks):
                                       int(sample_param['end_time'][5:7]),
                                       int(sample_param['end_time'][8:10]))
         last_day = '-12-30'
+    if sample_param['grid'] == 'latlon':
+        addlon = 2
+        addlat = 1
+    elif sample_param['grid'] == 'cartesian':
+        addlon = 2e5
+        addlat = 1e5
     lon1 = int(np.argmin(((data_in['lon']
-               - (sample_param['lon1'] - 2)) ** 2).values))
+               - (sample_param['lon1'] - addlon)) ** 2).values))
     lon2 = int(np.argmin(((data_in['lon']
-               - (sample_param['lon2'] + 2)) ** 2).values))
+               - (sample_param['lon2'] + addlon)) ** 2).values))
     lat1 = int(np.argmin(((data_in['lat']
-               - (sample_param['lat1'] - 1)) ** 2).values))
+               - (sample_param['lat1'] - addlat)) ** 2).values))
     lat2 = int(np.argmin(((data_in['lat']
-               - (sample_param['lat2'] + 1)) ** 2).values))
+               - (sample_param['lat2'] + addlat)) ** 2).values))
     vars_to_compute = sample_param['sample_vars']
     if sample_param['range']:
         vars_to_compute.append(sample_param['var_range'][0])
@@ -807,17 +818,14 @@ def sample(tracks, data, sample_param):
             i_before = i
             # only consider tracks that are shorter than max_time
             if len(tracks[ed]['time']) < sample_param['max_time']:
-                try:
-                    sample, i, j, computed_data = sample_core(tracks[ed],
-                                                              computed_data,
-                                                              data,
-                                                              sample_param,
-                                                              i, j,
-                                                              lifetime,
-                                                              start_time,
-                                                              end_time)
-                except:
-                    pass
+                sample, i, j, computed_data = sample_core(tracks[ed],
+                                                          computed_data,
+                                                          data,
+                                                          sample_param,
+                                                          i, j,
+                                                          lifetime,
+                                                          start_time,
+                                                          end_time)
             if i_before == i - 1:
                 e_num = "%07d" % (i,)
                 file_name = (sample_param['save_location']
