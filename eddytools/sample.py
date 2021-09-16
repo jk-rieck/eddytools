@@ -313,6 +313,8 @@ def write_to_netcdf(file_name, sample, sample_param, data):
         dummy_sec_lat = np.zeros((len_t)) + np.nan
         dummy_sec_norm_lon = np.zeros((len_t, max_sec)) + np.nan
         for t in np.arange(0, len(sample['time'])):
+            len_p = len(sample['eddy_i'][t])
+            len_s = len(sample[var + '_sec_lon'][t])
             if len(data[var].shape) == 3:
                 dummy_around[t] = sample[var + '_around'][t]
                 dummy_var[t, 0:len_p, 0:len_p] = sample[var][t]
@@ -321,8 +323,6 @@ def write_to_netcdf(file_name, sample, sample_param, data):
                 dummy_around[t, :] = sample[var + '_around'][t]
                 dummy_var[t, :, 0:len_p, 0:len_p] = sample[var][t]
                 dummy_sec[t, :, 0:len_s] = sample[var + '_sec'][t]
-            len_p = len(sample['eddy_i'][t])
-            len_s = len(sample[var + '_sec_lon'][t])
             dummy_lon[t, 0:len_p] = sample[var + '_lon'][t]
             dummy_lat[t, 0:len_p] = sample[var + '_lat'][t]
             dummy_sec_lon[t, 0:len_s] = sample[var + '_sec_lon'][t]
