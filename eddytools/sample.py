@@ -297,46 +297,69 @@ def write_to_netcdf(file_name, sample, sample_param, data):
     len_t = len(sample['time'])
     len_z = len(data['z'])
     for var in sample_param['sample_vars']:
-        dummy_around = np.zeros((len_t, len_z)) + np.nan
+        if len(data[var].shape) == 3:
+            dummy_around = np.zeros((len_t)) + np.nan
+            dummy_var = np.zeros((len_t,
+                                  max_points, max_points)) + np.nan
+            dummy_sec = np.zeros((len_t, max_sec)) + np.nan
+        else:
+            dummy_around = np.zeros((len_t, len_z)) + np.nan
+            dummy_var = np.zeros((len_t, len_z,
+                                  max_points, max_points)) + np.nan
+            dummy_sec = np.zeros((len_t, len_z, max_sec)) + np.nan
         dummy_lon = np.zeros((len_t, max_points)) + np.nan
         dummy_lat = np.zeros((len_t, max_points)) + np.nan
-        dummy_var = np.zeros((len_t, len_z, max_points, max_points)) + np.nan
         dummy_sec_lon = np.zeros((len_t, max_sec)) + np.nan
         dummy_sec_lat = np.zeros((len_t)) + np.nan
-        dummy_sec = np.zeros((len_t, len_z, max_sec)) + np.nan
         dummy_sec_norm_lon = np.zeros((len_t, max_sec)) + np.nan
         for t in np.arange(0, len(sample['time'])):
             len_p = len(sample['eddy_i'][t])
             len_s = len(sample[var + '_sec_lon'][t])
-            dummy_around[t, :] = sample[var + '_around'][t]
+            if len(data[var].shape) == 3:
+                dummy_around[t] = sample[var + '_around'][t]
+                dummy_var[t, 0:len_p, 0:len_p] = sample[var][t]
+                dummy_sec[t, 0:len_s] = sample[var + '_sec'][t]
+            else:
+                dummy_around[t, :] = sample[var + '_around'][t]
+                dummy_var[t, :, 0:len_p, 0:len_p] = sample[var][t]
+                dummy_sec[t, :, 0:len_s] = sample[var + '_sec'][t]
             dummy_lon[t, 0:len_p] = sample[var + '_lon'][t]
             dummy_lat[t, 0:len_p] = sample[var + '_lat'][t]
-            dummy_var[t, :, 0:len_p, 0:len_p] = sample[var][t]
             dummy_sec_lon[t, 0:len_s] = sample[var + '_sec_lon'][t]
             dummy_sec_lat[t] = sample[var + '_sec_lat'][t]
-            dummy_sec[t, :, 0:len_s] = sample[var + '_sec'][t]
             dummy_sec_norm_lon[t, 0:len_s] = sample[var + '_sec_norm_lon'][t]
-        out_nc = out_nc.update({var + '_around':
-                                (['time', 'depth'],
-                                 dummy_around.astype(np.float32))})
+        if len(data[var].shape) == 3:
+            out_nc = out_nc.update({var + '_around':
+                                   (['time'],
+                                    dummy_around.astype(np.float32))})
+            out_nc = out_nc.update({var:
+                                    (['time', 'points', 'points'],
+                                     dummy_var.astype(np.float32))})
+            out_nc = out_nc.update({var + '_sec':
+                                    (['time', 'sec_index'],
+                                     dummy_sec.astype(np.float32))})
+        else:
+            out_nc = out_nc.update({var + '_around':
+                                    (['time', 'depth'],
+                                     dummy_around.astype(np.float32))})
+            out_nc = out_nc.update({var:
+                                    (['time', 'depth', 'points', 'points'],
+                                     dummy_var.astype(np.float32))})
+            out_nc = out_nc.update({var + '_sec':
+                                    (['time', 'depth', 'sec_index'],
+                                     dummy_sec.astype(np.float32))})
         out_nc = out_nc.update({var + '_lon':
                                 (['time', 'points'],
                                  dummy_lon.astype(np.float32))})
         out_nc = out_nc.update({var + '_lat':
                                 (['time', 'points'],
                                  dummy_lat.astype(np.float32))})
-        out_nc = out_nc.update({var:
-                                (['time', 'depth', 'points', 'points'],
-                                 dummy_var.astype(np.float32))})
         out_nc = out_nc.update({var + '_sec_lon':
                                 (['time', 'sec_index'],
                                  dummy_sec_lon.astype(np.float32))})
         out_nc = out_nc.update({var + '_sec_lat':
                                 (['time'],
                                  dummy_sec_lat.astype(np.float32))})
-        out_nc = out_nc.update({var + '_sec':
-                                (['time', 'depth', 'sec_index'],
-                                 dummy_sec.astype(np.float32))})
         out_nc = out_nc.update({var + '_sec_norm_lon':
                                 (['time', 'sec_index'],
                                  dummy_sec_norm_lon.astype(np.float32))})
