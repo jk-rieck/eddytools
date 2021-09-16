@@ -216,7 +216,9 @@ def seasonal(eddies, variables):
                     thr = '11'
                 for var in variables:
                     for m in [one, two, thr]:
-                        crit = np.abs(eddies[var + '_anom'][m]) > 100
+                        crit = (np.abs(eddies[var + '_anom'][m])
+                                > np.mean(np.abs(eddies[var + '_anom'][m]))
+                                * 100)
                         eddies[var + '_anom'][m][crit] = np.nan
                         eddies[var][m][crit] = np.nan
                     if len(np.shape(eddies[var + '_anom'][one])) == 4:
@@ -365,7 +367,9 @@ def monthly(eddies, variables):
                       '07', '08', '09', '10', '11', '12']:
                 out[meth][quant][m] = {}
                 for var in variables:
-                    crit = np.abs(eddies[var + '_anom'][m]) > 100
+                    crit = (np.abs(eddies[var + '_anom'][m])
+                            > np.mean(np.abs(eddies[var + '_anom'][m]))
+                            * 100)
                     eddies[var + '_anom'][m][crit] = np.nan
                     eddies[var][m][crit] = np.nan
                     if len(np.shape(eddies[var + '_anom'][m])) == 4:
