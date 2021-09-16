@@ -372,7 +372,7 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
     return eddi
 
 
-def detect_SSH_core(field_in, lon, lat, ssh_crits_in, res, Npix_min, Npix_max, amp_thresh, d_thresh):
+def detect_SSH_core(data, det_param.copy(), SSH, ssh_crits, e1f, e2f):
     '''
     Detect eddies present in field which satisfy the 5 criteria
     outlined in Chelton et al., Prog. ocean., 2011, App. B.2.:
@@ -387,17 +387,8 @@ def detect_SSH_core(field_in, lon, lat, ssh_crits_in, res, Npix_min, Npix_max, a
     more details)
 
     Input:
-        field_in: 2D filtered SSH field
-        lon: longitude vector (of SSH grid)
-        lat: latitude vector (of SSH grid)
-            ssh_thr: min/max threshold of SST anomalies
-            dssh: threshold increment
-            res: horizontal resolution of the field
-            Npix_min: minimum number of pixels of an eddy
-            Npix_max: maximum number of pixels of an eddy
-            amp_thresh: minimum eddy amplitude
-            d_thresh: maximum distance between any pair of points inside an eddy
-        cyc: type of eddy to detect ('cyclonic' or 'anticyclonic')
+        data: 2D filtered SSH field
+
 
     Output:
         eddies: dictionary containing the following variables
@@ -407,11 +398,9 @@ def detect_SSH_core(field_in, lon, lat, ssh_crits_in, res, Npix_min, Npix_max, a
             area: area of the detected eddies in km*2
             scale: scale of the detected eddies (see Chelton et al. 2011)
     '''
-    # convert input_field to numpy array
-    field = field_in.values
     #set up grid
     len_deg_lat = 111.325 # length of 1 degree of latitude [km]
-    llon, llat = np.meshgrid(lon, lat)
+    llon, llat = np.meshgrid(data.lon, data.lat)
 
     # initialise eddy counter & output dict
     e = 0
@@ -421,12 +410,12 @@ def detect_SSH_core(field_in, lon, lat, ssh_crits_in, res, Npix_min, Npix_max, a
 
         # ssh_crits increasing for 'anticyclonic', decreasing for 'cyclonic'
         # flip to start with largest positive value for 'cylonic'
-        crit_len = int(len(ssh_crits_in) / 2)
+        crit_len = int(len(ssh_crits) / 2)
 
         if cyc == 'cyclonic':
-            ssh_crits = np.flipud(ssh_crits_in)[crit_len:]
+            ssh_crits = np.flipud(ssh_crits)[crit_len:]
         if cyc == 'anticyclonic':
-            ssh_crits = ssh_crits_in[crit_len:]
+            ssh_crits = ssh_crits[crit_len:]
 
         # loop over ssh_crits and remove interior pixels of detected eddies from subsequent loop steps
         for ssh_crit in ssh_crits:
@@ -612,14 +601,6 @@ def detect_OW(data, det_param, ow_var, vort_var):
                                   OW, vort, tt, OW_thr, e1f, e2f)
         ,seeds_bag)
     eddies = detection.compute()
-    #eddies = {}
-    #for tt in np.arange(0, len(OW['time'])):
-    #    steps = np.around(np.linspace(0, len(OW['time']), 10))
-    #    if tt in steps:
-    #        print('detection at time step ', str(tt + 1), ' of ',
-    #              len(OW['time']))
-    #    eddies[tt] = detect_OW_core(data, det_param.copy(),
-    #                                OW, vort, tt, OW_thr, e1f, e2f)
     return eddies
 
 
@@ -724,7 +705,8 @@ def detect_SSH(data, det_param, ssh_var):
     seeds_bag = dask_bag.from_sequence(pexps)
 
     detection = dask_bag.map(
-        lambda tt: detect_SSH_core(data, det_param.copy(), SSH, ssh_crits)
+        lambda tt: detect_SSH_core(data, det_param.copy(), SSH, ssh_crits,
+                                   e1f, e2f)
         ,seeds_bag)
 
     eddies = detection.compute()
