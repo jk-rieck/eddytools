@@ -270,7 +270,13 @@ def detect_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
         region_Npix = len(index[0])
         eddy_area_within_limits = ((region_Npix < det_param['Npix_max'])
                                    * (region_Npix > det_param['Npix_min']))
-        if eddy_area_within_limits:
+        min_width = int(np.floor(np.sqrt(region_Npix) / 2))
+        X_cen = int(np.floor(np.mean(index[1])))
+        Y_cen = int(np.floor(np.mean(index[0])))
+        Ypix_cen = np.sum(index[1] == X_cen)
+        Xpix_cen = np.sum(index[0] == Y_cen)
+        eddy_not_too_thin = ((Xpix_cen > min_width) & (Ypix_cen > min_width))
+        if (eddy_area_within_limits & eddy_not_too_thin):
             # If the region is not too small and not too big, extract
             # eddy information
             eddi[e]['time'] = OW.isel(time=t)['time'].values
