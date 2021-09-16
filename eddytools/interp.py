@@ -647,6 +647,7 @@ def spatial_filter(data_int, int_param):
     cut_lat = int_param['cut_lat']
     res = int_param['res']
     for var in int_param['vars_to_filter']:
+        print('filtering', var)
         field = data_int[var]
         field_filt = np.zeros(field.shape)
         # land mask
