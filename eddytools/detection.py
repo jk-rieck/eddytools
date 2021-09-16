@@ -368,11 +368,11 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
                                          * (e2f.values[index] / 1000.)).sum()])
             eddi[e]['scale'] = np.array([np.sqrt(eddi[e]['area']
                                          / np.pi)])  # [km]
-            e = e+1
+            e += 1
     return eddi
 
 
-def detect_SSH_core(data, det_param.copy(), SSH, ssh_crits, e1f, e2f):
+def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
     '''
     Detect eddies present in field which satisfy the 5 criteria
     outlined in Chelton et al., Prog. ocean., 2011, App. B.2.:
@@ -401,95 +401,93 @@ def detect_SSH_core(data, det_param.copy(), SSH, ssh_crits, e1f, e2f):
     #set up grid
     len_deg_lat = 111.325 # length of 1 degree of latitude [km]
     llon, llat = np.meshgrid(data.lon, data.lat)
-
     # initialise eddy counter & output dict
     e = 0
     eddi = {}
-
     for cyc in ['cyclonic','anticyclonic']:
-
         # ssh_crits increasing for 'anticyclonic', decreasing for 'cyclonic'
         # flip to start with largest positive value for 'cylonic'
         crit_len = int(len(ssh_crits) / 2)
-
         if cyc == 'cyclonic':
             ssh_crits = np.flipud(ssh_crits)[crit_len:]
         if cyc == 'anticyclonic':
             ssh_crits = ssh_crits[crit_len:]
-
-        # loop over ssh_crits and remove interior pixels of detected eddies from subsequent loop steps
+        # loop over ssh_crits and remove interior pixels of detected eddies
+        # from subsequent loop steps
         for ssh_crit in ssh_crits:
-        # 1. Find all regions with eta greater (less than) than ssh_crit for anticyclonic (cyclonic) eddies (Chelton et al. 2011, App. B.2, criterion 1)
+        # 1. Find all regions with eta greater (less than) than ssh_crit for
+        # anticyclonic (cyclonic) eddies (Chelton et al. 2011, App. B.2,
+        # criterion 1)
             if cyc == 'anticyclonic':
-                regions, nregions = ndimage.label( (field>ssh_crit).astype(int) )
+                regions, nregions = ndimage.label(
+                    (SSH.isel(time=t) > ssh_crit).astype(int))
             elif cyc == 'cyclonic':
-                regions, nregions = ndimage.label( (field<ssh_crit).astype(int) )
+                regions, nregions = ndimage.label(
+                    (SSH.isel(time=t) < ssh_crit).astype(int))
 
             for iregion in list(range(nregions)):
                 eddi[e] = {}
-        # 2. Calculate number of pixels comprising detected region, reject if not within [Npix_min, Npix_max]
+        # 2. Calculate number of pixels comprising detected region, reject if
+        # not within [Npix_min, Npix_max]
                 region = (regions==iregion+1).astype(int)
                 region_Npix = region.sum()
-                eddy_area_within_limits = (region_Npix < Npix_max) * (region_Npix > Npix_min)
-
-        # 3. Detect presence of local maximum (minimum) for anticylonic (cyclonic) eddies, reject if non-existent
+                eddy_area_within_limits = ((region_Npix < Npix_max) *
+                                           (region_Npix > Npix_min))
+        # 3. Detect presence of local maximum (minimum) for anticylonic
+        # (cyclonic) eddies, reject if non-existent
                 interior = ndimage.binary_erosion(region)
                 exterior = region.astype(bool) ^ interior
                 if interior.sum() == 0:
                     continue
                 if cyc == 'anticyclonic':
-                    has_internal_ext = field[interior].max() > field[exterior].max()
+                    has_internal_ext = SSH[interior].max() > SSH[exterior].max()
                 elif cyc == 'cyclonic':
-                    has_internal_ext = field[interior].min() < field[exterior].min()
-
+                    has_internal_ext = SSH[interior].min() < SSH[exterior].min()
         # 4. Find amplitude of region, reject if < amp_thresh
                 if cyc == 'anticyclonic':
-                    amp = field[interior].max() - field[exterior].mean()
+                    amp = field[interior].max() - SSH[exterior].mean()
                 elif cyc == 'cyclonic':
-                    amp = field[exterior].mean() - field[interior].min()
+                    amp = field[exterior].mean() - SSH[interior].min()
                 is_tall_eddy = amp >= amp_thresh
-
         # 5. Find maximum linear dimension of region, reject if < d_thresh
-                if np.logical_not( eddy_area_within_limits * has_internal_ext * is_tall_eddy):
+                if np.logical_not( eddy_area_within_limits
+                                   * has_internal_ext * is_tall_eddy):
                     continue
                 lon_ext = llon[exterior]
                 lat_ext = llat[exterior]
                 d = distance_matrix(lon_ext, lat_ext)
                 is_small_eddy = d.max() < d_thresh
-
         # Detected eddies:
-                if eddy_area_within_limits * has_internal_ext * is_tall_eddy * is_small_eddy:
+                if (eddy_area_within_limits * has_internal_ext
+                    * is_tall_eddy * is_small_eddy):
                     # find centre of mass of eddy
-                    eddy_object_with_mass = field * region
+                    eddy_object_with_mass = SSH * region
                     eddy_object_with_mass[np.isnan(eddy_object_with_mass)] = 0
                     j_cen, i_cen = ndimage.center_of_mass(eddy_object_with_mass)
                     lon_cen = np.interp(i_cen, range(0,len(lon)), lon)
                     lat_cen = np.interp(j_cen, range(0,len(lat)), lat)
-
                     # store all eddy grid-points
                     index = get_indeces(region)
                     eddi[e]['eddy_j'] = index[0]
                     eddi[e]['eddy_i'] = index[1]
-
-                    # assign (and calculated) amplitude, area, and scale of eddies
-                    len_deg_lon = (np.pi/180.) * 6371 * np.cos( lat_cen * np.pi/180. ) #[km]
-                    area = region_Npix * res**2 * len_deg_lat * len_deg_lon # [km**2]
+                    # assign (and calculated) amplitude, area, and scale of
+                    # eddies
+                    len_deg_lon = ((np.pi/180.) * 6371
+                                   * np.cos( lat_cen * np.pi/180. )) #[km]
+                    area = region_Npix * res**2 * len_deg_lat * len_deg_lon
+                    # [km**2]
                     scale = np.sqrt(area / np.pi) # [km]
-
-
                     # remove its interior pixels from further eddy detection
-                    eddy_mask = np.ones(field.shape)
+                    eddy_mask = np.ones(SSH.shape)
                     eddy_mask[interior.astype(int)==1] = np.nan
-                    field = field * eddy_mask
-
-                    eddi[e]['time'] = field_in.time.values
+                    SSH = SSH * eddy_mask
+                    eddi[e]['time'] = data.time
                     eddi[e]['lon_cen'] = lon_cen
                     eddi[e]['lat_cen'] = lat_cen
                     eddi[e]['amp'] = amp
                     eddi[e]['area'] = area
                     eddi[e]['scale'] = scale
                     eddi[e]['type'] = cyc
-
                     e += 1
     return eddi
 
@@ -705,7 +703,7 @@ def detect_SSH(data, det_param, ssh_var):
     seeds_bag = dask_bag.from_sequence(pexps)
 
     detection = dask_bag.map(
-        lambda tt: detect_SSH_core(data, det_param.copy(), SSH, ssh_crits,
+        lambda tt: detect_SSH_core(data, det_param.copy(), SSH, tt, ssh_crits,
                                    e1f, e2f)
         ,seeds_bag)
 
