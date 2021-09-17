@@ -574,8 +574,8 @@ def detect_OW(data, det_param, ow_var, vort_var):
     if det_param['grid'] == 'latlon':
         data, det_param = monotonic_lon(data, det_param)
     # Masking shallow regions and cut out the region specified in `det_param`
-    OW = maskandcut(data, ow_var, det_param).compute()
-    vort = maskandcut(data, vort_var, det_param).compute()
+    OW = maskandcut(data, ow_var, det_param)
+    vort = maskandcut(data, vort_var, det_param)
     OW_thr_name = det_param['OW_thr_name']
     # Define the names of the grid cell sizes depending on the model
     if det_param['model'] == 'MITgcm':
@@ -584,11 +584,11 @@ def detect_OW(data, det_param, ow_var, vort_var):
     if det_param['model'] == 'ORCA':
         e1f_name = 'e1f'
         e2f_name = 'e2f'
-    e1f = maskandcut(data, e1f_name, det_param).compute()
-    e2f = maskandcut(data, e2f_name, det_param).compute()
+    e1f = maskandcut(data, e1f_name, det_param)
+    e2f = maskandcut(data, e2f_name, det_param)
     if len(np.shape(data[OW_thr_name])) > 1:
         # If the Okubo-Weiss threshold is 2D, use `maskandcutOW` masking etc.
-        OW_thr = maskandcut(data, OW_thr_name, det_param).compute()
+        OW_thr = maskandcut(data, OW_thr_name, det_param)
         OW_thr = OW_thr * (det_param['OW_thr_factor'])
     else:
         # Else just use scalar from `det_param`
@@ -684,7 +684,7 @@ def detect_SSH(data, det_param, ssh_var):
     if det_param['grid'] == 'latlon':
         data, det_param = monotonic_lon(data, det_param)
     # Masking shallow regions and cut out the region specified in `det_param`
-    SSH = maskandcut(data, ssh_var, det_param).compute()
+    SSH = maskandcut(data, ssh_var, det_param)
     # Define the names of the grid cell sizes depending on the model
     if det_param['model'] == 'MITgcm':
         e1f_name = 'dxV'
@@ -692,8 +692,8 @@ def detect_SSH(data, det_param, ssh_var):
     if det_param['model'] == 'ORCA':
         e1f_name = 'e1f'
         e2f_name = 'e2f'
-    e1f = maskandcut(data, e1f_name, det_param).compute()
-    e2f = maskandcut(data, e2f_name, det_param).compute()
+    e1f = maskandcut(data, e1f_name, det_param)
+    e2f = maskandcut(data, e2f_name, det_param)
     ## create list of incremental threshold
     ssh_crits = np.arange(-det_param['ssh_thr'],
                           det_param['ssh_thr'] + det_param['dssh'],
