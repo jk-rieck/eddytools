@@ -7,6 +7,7 @@ needs to have the same structure.
 
 '''
 
+import sys
 import numpy as np
 import pandas as pd
 from scipy import ndimage
@@ -593,16 +594,32 @@ def detect_OW(data, det_param, ow_var, vort_var):
     else:
         # Else just use scalar from `det_param`
         OW_thr = det_param['OW_thr'] * (det_param['OW_thr_factor'])
-    ## set range of parallel executions
-    pexps = range(0, len(OW['time']))
-    ## generate dask bag instance
-    seeds_bag = dask_bag.from_sequence(pexps)
-    print("Detecting eddies in Okubo-Weiss parameter fields")
-    detection = dask_bag.map(
-        lambda tt: detect_OW_core(data, det_param.copy(),
-                                  OW, vort, tt, OW_thr, e1f, e2f)
-        ,seeds_bag)
-    eddies = detection.compute()
+    if "dask.distributed" in sys.modules:
+        ## set range of parallel executions
+        pexps = range(0, len(OW['time']))
+        ## generate dask bag instance
+        seeds_bag = dask_bag.from_sequence(pexps)
+        print("Detecting eddies in Okubo-Weiss parameter fields")
+        detection = dask_bag.map(
+            lambda tt: detect_OW_core(data, det_param.copy(),
+                                      OW, vort, tt, OW_thr, e1f, e2f)
+                                 ,seeds_bag)
+        eddies = detection.compute()
+    else:
+        eddies = {}
+        OW = OW.compute()
+        vort = vort.compute()
+        e1f = e1f.compute()
+        e2f = e2f.compute()
+        if len(np.shape(data[OW_thr_name])) > 1:
+            OW_thr = OW_thr.compute()
+        for tt in np.arange(0, len(OW['time'])):
+            steps = np.around(np.linspace(0, len(OW['time']), 10))
+            if tt in steps:
+                print('detection at time step ', str(tt + 1), ' of ',
+                      len(OW['time']))
+                eddies[tt] = detect_OW_core(data, det_param.copy(),
+                                            OW, vort, tt, OW_thr, e1f, e2f)
     return eddies
 
 
@@ -699,14 +716,27 @@ def detect_SSH(data, det_param, ssh_var):
                           det_param['ssh_thr'] + det_param['dssh'],
                           det_param['dssh'])
     ssh_crits = np.sort(ssh_crits) # make sure its increasing order
-    ## set range of parallel executions
-    pexps = range(0, len(SSH['time']))
-    ## generate dask bag instance
-    seeds_bag = dask_bag.from_sequence(pexps)
-    print("Detecting eddies in SSH fields")
-    detection = dask_bag.map(
-        lambda tt: detect_SSH_core(data, det_param.copy(), SSH, tt, ssh_crits,
-                                   e1f, e2f)
-        ,seeds_bag)
-    eddies = detection.compute()
+    if "dask.distributed" in sys.modules:
+        ## set range of parallel executions
+        pexps = range(0, len(SSH['time']))
+        ## generate dask bag instance
+        seeds_bag = dask_bag.from_sequence(pexps)
+        print("Detecting eddies in SSH fields")
+        detection = dask_bag.map(
+            lambda tt: detect_SSH_core(data, det_param.copy(), SSH, tt,
+                                       ssh_crits, e1f, e2f)
+                                 ,seeds_bag)
+        eddies = detection.compute()
+    else:
+        eddies = {}
+        SSH = SSH.compute()
+        e1f = e1f.compute()
+        e2f = e2f.compute()
+        for tt in np.arange(0, len(SSH['time'])):
+            steps = np.around(np.linspace(0, len(SSH['time']), 10))
+            if tt in steps:
+                print('detection at time step ', str(tt + 1), ' of ',
+                      len(SSH['time']))
+                eddies[tt] = detect_SSH_core(data, det_param.copy(),
+                                             SSH, tt, ssh_crits, e1f, e2f)
     return eddies
