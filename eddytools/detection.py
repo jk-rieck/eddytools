@@ -450,7 +450,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     amp = field[interior].max() - field[exterior].mean()
                 elif cyc == 'cyclonic':
                     amp = field[exterior].mean() - field[interior].min()
-                is_tall_eddy = amp >= amp_thresh
+                is_tall_eddy = amp >= det_param['amp_thr']
         # 5. Find maximum linear dimension of region, reject if < d_thresh
                 if np.logical_not( eddy_area_within_limits
                                    * has_internal_ext * is_tall_eddy):
@@ -458,7 +458,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                 lon_ext = llon[exterior]
                 lat_ext = llat[exterior]
                 d = distance_matrix(lon_ext, lat_ext)
-                is_small_eddy = d.max() < d_thresh
+                is_small_eddy = d.max() < det_param['d_thr']
         # Detected eddies:
                 if (eddy_area_within_limits * has_internal_ext
                     * is_tall_eddy * is_small_eddy):
