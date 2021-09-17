@@ -432,8 +432,9 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
         # not within [Npix_min, Npix_max]
                 region = (regions==iregion+1).astype(int)
                 region_Npix = region.sum()
-                eddy_area_within_limits = ((region_Npix < Npix_max) *
-                                           (region_Npix > Npix_min))
+                eddy_area_within_limits = (
+                    (region_Npix < det_param['Npix_max'])
+                    * (region_Npix > det_param['Npix_min']))
         # 3. Detect presence of local maximum (minimum) for anticylonic
         # (cyclonic) eddies, reject if non-existent
                 interior = ndimage.binary_erosion(region)
