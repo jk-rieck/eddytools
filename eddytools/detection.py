@@ -466,8 +466,8 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     eddy_object_with_mass = field * region
                     eddy_object_with_mass[np.isnan(eddy_object_with_mass)] = 0
                     j_cen, i_cen = ndimage.center_of_mass(eddy_object_with_mass)
-                    lon_cen = np.interp(i_cen, range(0,len(lon)), lon)
-                    lat_cen = np.interp(j_cen, range(0,len(lat)), lat)
+                    lon_cen = np.interp(i_cen, range(0,len(SSH.lon)), SSH.lon)
+                    lat_cen = np.interp(j_cen, range(0,len(SSH.lat)), SSH.lat)
                     # store all eddy grid-points
                     index = get_indeces(region)
                     eddi[e]['eddy_j'] = index[0]
@@ -476,7 +476,8 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     # eddies
                     len_deg_lon = ((np.pi/180.) * 6371
                                    * np.cos( lat_cen * np.pi/180. )) #[km]
-                    area = region_Npix * res**2 * len_deg_lat * len_deg_lon
+                    area = (region_Npix * det_param['res'] ** 2
+                            * len_deg_lat * len_deg_lon)
                     # [km**2]
                     scale = np.sqrt(area / np.pi) # [km]
                     # remove its interior pixels from further eddy detection
@@ -596,6 +597,7 @@ def detect_OW(data, det_param, ow_var, vort_var):
     pexps = range(0, len(OW['time']))
     ## generate dask bag instance
     seeds_bag = dask_bag.from_sequence(pexps)
+    print("Detecting eddies in Okubo-Weiss parameter fields")
     detection = dask_bag.map(
         lambda tt: detect_OW_core(data, det_param.copy(),
                                   OW, vort, tt, OW_thr, e1f, e2f)
@@ -697,17 +699,14 @@ def detect_SSH(data, det_param, ssh_var):
                           det_param['ssh_thr'] + det_param['dssh'],
                           det_param['dssh'])
     ssh_crits = np.sort(ssh_crits) # make sure its increasing order
-
     ## set range of parallel executions
     pexps = range(0, len(SSH['time']))
-
     ## generate dask bag instance
     seeds_bag = dask_bag.from_sequence(pexps)
-
+    print("Detecting eddies in SSH fields")
     detection = dask_bag.map(
         lambda tt: detect_SSH_core(data, det_param.copy(), SSH, tt, ssh_crits,
                                    e1f, e2f)
         ,seeds_bag)
-
     eddies = detection.compute()
     return eddies
