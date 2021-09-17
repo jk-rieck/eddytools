@@ -399,8 +399,9 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
             scale: scale of the detected eddies (see Chelton et al. 2011)
     '''
     #set up grid
+    field = SSH.isel(time=t).values
     len_deg_lat = 111.325 # length of 1 degree of latitude [km]
-    llon, llat = np.meshgrid(data.lon, data.lat)
+    llon, llat = np.meshgrid(SSH.lon, SSH.lat)
     # initialise eddy counter & output dict
     e = 0
     eddi = {}
@@ -420,10 +421,10 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
         # criterion 1)
             if cyc == 'anticyclonic':
                 regions, nregions = ndimage.label(
-                    (SSH.isel(time=t) > ssh_crit).astype(int))
+                    (field > ssh_crit).astype(int))
             elif cyc == 'cyclonic':
                 regions, nregions = ndimage.label(
-                    (SSH.isel(time=t) < ssh_crit).astype(int))
+                    (field < ssh_crit).astype(int))
 
             for iregion in list(range(nregions)):
                 eddi[e] = {}
@@ -440,14 +441,14 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                 if interior.sum() == 0:
                     continue
                 if cyc == 'anticyclonic':
-                    has_internal_ext = SSH[interior].max() > SSH[exterior].max()
+                    has_internal_ext = field[interior].max() > field[exterior].max()
                 elif cyc == 'cyclonic':
-                    has_internal_ext = SSH[interior].min() < SSH[exterior].min()
+                    has_internal_ext = field[interior].min() < field[exterior].min()
         # 4. Find amplitude of region, reject if < amp_thresh
                 if cyc == 'anticyclonic':
-                    amp = field[interior].max() - SSH[exterior].mean()
+                    amp = field[interior].max() - field[exterior].mean()
                 elif cyc == 'cyclonic':
-                    amp = field[exterior].mean() - SSH[interior].min()
+                    amp = field[exterior].mean() - field[interior].min()
                 is_tall_eddy = amp >= amp_thresh
         # 5. Find maximum linear dimension of region, reject if < d_thresh
                 if np.logical_not( eddy_area_within_limits
@@ -461,7 +462,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                 if (eddy_area_within_limits * has_internal_ext
                     * is_tall_eddy * is_small_eddy):
                     # find centre of mass of eddy
-                    eddy_object_with_mass = SSH * region
+                    eddy_object_with_mass = field * region
                     eddy_object_with_mass[np.isnan(eddy_object_with_mass)] = 0
                     j_cen, i_cen = ndimage.center_of_mass(eddy_object_with_mass)
                     lon_cen = np.interp(i_cen, range(0,len(lon)), lon)
@@ -478,9 +479,9 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     # [km**2]
                     scale = np.sqrt(area / np.pi) # [km]
                     # remove its interior pixels from further eddy detection
-                    eddy_mask = np.ones(SSH.shape)
+                    eddy_mask = np.ones(field.shape)
                     eddy_mask[interior.astype(int)==1] = np.nan
-                    SSH = SSH * eddy_mask
+                    field = field * eddy_mask
                     eddi[e]['time'] = data.time
                     eddi[e]['lon_cen'] = lon_cen
                     eddi[e]['lat_cen'] = lat_cen
