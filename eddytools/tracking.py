@@ -6,6 +6,7 @@ detected with the module `detection.py` of this packkage.
 '''
 
 import sys
+import os
 import numpy as np
 from scipy import interpolate
 import operator
@@ -533,13 +534,13 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
     Appends to global variables `tracks` and `terminated_list`.
     '''
     # Now, none of the eddies in `det_eddies` have been assigned to a track.
-    unassigned = list(range(len(det_eddies) - 1))
+    unassigned = list(range(len(det_eddies)))
 
     # For each existing eddy (t<tt) that has not been terminated, loop through
     # the unassigned eddies and assign to existing eddy if appropriate
     #
     # First we construct a list of all existing eddies
-    eddy_list = list(range(len(tracks) - 1))
+    eddy_list = list(range(len(tracks)))
     # Now we remove all terminated eddies from that list
     [eddy_list.remove(terminated_list[i]) for i in range(len(terminated_list))]
     for ed in eddy_list:
@@ -548,7 +549,13 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
         if not tracks[ed]['terminated']:
             # Get all unassigned eddies from `det_eddies`
             get_item = operator.itemgetter(*unassigned)
-            un_items = get_item(det_eddies)
+            tmp_items = get_item(det_eddies)
+            try:
+                test = tmp_items[0]
+                un_items = tmp_items
+            except:
+                un_items = {}
+                un_items[0] = tmp_items
             range_un_items = range(0, len(un_items))
 
             # Test whether any eddies in `un_items` are near `tracks[ed]`
@@ -762,9 +769,28 @@ def track(tracking_params, in_file=True):
     terminated_list = []
     tracks = []
     if in_file:
-        datestring = str(eddies_time[0])[0:10]
+        t = 0
+        didntwork = True
+        while didntwork:
+            try:
+                firstdate = str(eddies_time[t])[0:10]
+                os.path.isfile(trac_param['data_path']
+                               + trac_param['file_root'] + '_'
+                               + str(firstdate) + '_'
+                               + trac_param['file_spec']
+                               + '.pickle')
+                didntwork = False
+            except:
+                t += 1
+                didntwork = True
+                if t > len(eddies_time):
+                    break
+        if didntwork:
+            print('no eddies found to track')
+            return
+        datestring = firstdate
         with open(trac_param['data_path'] + trac_param['file_root'] + '_'
-                  + str(datestring) + '_' + trac_param['file_spec']
+                  + str(firstdate) + '_' + trac_param['file_spec']
                   + '.pickle',
                   'rb') as f:
             det_eddies = pickle.load(f)
@@ -778,7 +804,21 @@ def track(tracking_params, in_file=True):
                 tracks[ed]['eddy_j'][0] = det_eddies[ed]['eddy_j']
         f.close()
     else:
-        det_eddies = trac_param['dict'][0]
+        t = 0
+        didntwork = True
+        while didntwork:
+            try:
+                firstdate = trac_param['dict'][t][0]['time']
+                didntwork = False
+            except:
+                t += 1
+                didntwork = True
+                if t > len(eddies_time):
+                    break
+        if didntwork:
+            print('no eddies found to track')
+            return
+        det_eddies = trac_param['dict'][t]
         for ed in np.arange(0, len(det_eddies) - 1):
             tracks.append(det_eddies[ed].copy())
             tracks[ed]['exist_at_start'] = True
@@ -787,11 +827,34 @@ def track(tracking_params, in_file=True):
             tracks[ed]['eddy_j'] = {}
             tracks[ed]['eddy_i'][0] = det_eddies[ed]['eddy_i']
             tracks[ed]['eddy_j'][0] = det_eddies[ed]['eddy_j']
-    for tt in np.arange(1, len(eddies_time)):
+    terminate_all = False
+    for tt in np.arange(t + 1, len(eddies_time)):
         steps = np.around(np.linspace(0, len(eddies_time), 10))
         if tt in steps:
             print('tracking at time step ', str(tt + 1), ' of ',
                   len(eddies_time))
+        if in_file:
+            try:
+                nextdate = str(eddies_time[tt])[0:10]
+                os.path.isfile(trac_param['data_path']
+                               + trac_param['file_root'] + '_'
+                               + str(nextdate) + '_'
+                               + trac_param['file_spec']
+                               + '.pickle')
+            except:
+                terminate_all = True
+                continue
+        else:
+            try:
+                trac_param['dict'][tt][0]['time']
+            except:
+                terminate_all = True
+                continue
+        if terminate_all:
+            for ed in range(len(tracks)):
+                tracks[ed]['terminated'] = True
+                terminated_list.append(ed)
+            terminated_list = list(set(terminated_list))
         # Loop through all time steps in `det_eddies`
         if in_file:
             datestring = str(eddies_time[tt])[0:10]
@@ -807,6 +870,7 @@ def track(tracking_params, in_file=True):
             det_eddies = trac_param['dict'][tt]
             track_core(det_eddies, tracks, trac_param,
                        terminated_list, rossrad)
+        terminate_all = False
     # Now remove all tracks of length 1 from `tracks` (a track is only
     # considered as such, if the eddy can be tracked over at least 2
     # consecutive time steps)
