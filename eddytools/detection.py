@@ -370,6 +370,8 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             eddi[e]['scale'] = np.array([np.sqrt(eddi[e]['area']
                                          / np.pi)])  # [km]
             e += 1
+        else:
+            del eddi[e]
     return eddi
 
 
@@ -493,6 +495,8 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     eddi[e]['scale'] = scale
                     eddi[e]['type'] = cyc
                     e += 1
+                else:
+                    del eddi[e]
     return eddi
 
 
