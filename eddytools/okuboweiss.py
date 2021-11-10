@@ -37,12 +37,12 @@ def calc(data, grid, u_var, v_var):
     # g12 : gradient of zonal velocity in meridional direction
     # g21 : gradient of meridional velocity in zonal direction
     # g22 : gradient of meridional velocity in meridional direction
-    g11 = grid.interp(grid.diff(grid.interp(data[u_var], 'X', **int_args),
-                                'X', **diff_args), 'Y', **int_args)
-    g12 = grid.diff(data[u_var], 'Y', **diff_args)
-    g21 = grid.diff(data[v_var], 'X', **diff_args)
-    g22 = grid.interp(grid.diff(grid.interp(data[v_var], 'X', **int_args),
-                                'Y', **diff_args), 'Y', **int_args)
+    g11 = grid.interp(grid.derivative(grid.interp(data[u_var], 'X', **int_args),
+                                      'X', **diff_args), 'Y', **int_args)
+    g12 = grid.derivative(data[u_var], 'Y', **diff_args)
+    g21 = grid.derivative(data[v_var], 'X', **diff_args)
+    g22 = grid.interp(grid.derivative(grid.interp(data[v_var], 'X', **int_args),
+                                      'Y', **diff_args), 'Y', **int_args)
     # calculate the vorticity
     vort = (g21 - g12)
     # calculate the total strain
