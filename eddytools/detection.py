@@ -12,6 +12,8 @@ import pandas as pd
 from scipy import ndimage
 try:
     from dask import bag as dask_bag
+except:
+    print("Working without dask bags.")
 
 def maskandcut(data, var, det_param):
     ''' Mask regions in the dataset where the ocean is shallower than a
