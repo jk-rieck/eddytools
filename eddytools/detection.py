@@ -7,12 +7,11 @@ needs to have the same structure.
 
 '''
 
-import sys
 import numpy as np
 import pandas as pd
 from scipy import ndimage
-from dask import bag as dask_bag
-
+try:
+    from dask import bag as dask_bag
 
 def maskandcut(data, var, det_param):
     ''' Mask regions in the dataset where the ocean is shallower than a
@@ -500,7 +499,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
     return eddi
 
 
-def detect_OW(data, det_param, ow_var, vort_var):
+def detect_OW(data, det_param, ow_var, vort_var, use_bags=False):
     ''' Detect eddies based on specified Okubo-Weiss parameter.
 
     Parameters
@@ -598,7 +597,7 @@ def detect_OW(data, det_param, ow_var, vort_var):
     else:
         # Else just use scalar from `det_param`
         OW_thr = det_param['OW_thr'] * (det_param['OW_thr_factor'])
-    if "dask.distributed" in sys.modules:
+    if use_bags:
         ## set range of parallel executions
         pexps = range(0, len(OW['time']))
         ## generate dask bag instance
@@ -627,7 +626,7 @@ def detect_OW(data, det_param, ow_var, vort_var):
     return eddies
 
 
-def detect_SSH(data, det_param, ssh_var):
+def detect_SSH(data, det_param, ssh_var, use_bags=False):
     ''' Detect eddies based on SSH following Chelton 2011. Prepares the
     necessary input for detect_SSH_core that performs the actual detection.
     Parallel computation of timesteps using dask bag.
@@ -720,7 +719,7 @@ def detect_SSH(data, det_param, ssh_var):
                           det_param['ssh_thr'] + det_param['dssh'],
                           det_param['dssh'])
     ssh_crits = np.sort(ssh_crits) # make sure its increasing order
-    if "dask.distributed" in sys.modules:
+    if use_bags:
         ## set range of parallel executions
         pexps = range(0, len(SSH['time']))
         ## generate dask bag instance
