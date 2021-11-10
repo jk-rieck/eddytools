@@ -623,8 +623,8 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False):
             if tt in steps:
                 print('detection at time step ', str(tt + 1), ' of ',
                       len(OW['time']))
-                eddies[tt] = detect_OW_core(data, det_param.copy(),
-                                            OW, vort, tt, OW_thr, e1f, e2f)
+            eddies[tt] = detect_OW_core(data, det_param.copy(),
+                                        OW, vort, tt, OW_thr, e1f, e2f)
     return eddies
 
 
@@ -742,6 +742,6 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False):
             if tt in steps:
                 print('detection at time step ', str(tt + 1), ' of ',
                       len(SSH['time']))
-                eddies[tt] = detect_SSH_core(data, det_param.copy(),
-                                             SSH, tt, ssh_crits, e1f, e2f)
+            eddies[tt] = detect_SSH_core(data, det_param.copy(),
+                                         SSH, tt, ssh_crits, e1f, e2f)
     return eddies
