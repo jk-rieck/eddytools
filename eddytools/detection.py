@@ -280,7 +280,6 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
                       'lat': array, # central latitude
                       'scale': array, # diameter of the eddy
                       'area': array, # area of the eddy
-                      'vort_extr': array, # vorticity max/min
                       'amp': array, # vorticity amplitude
                       'eddy_i': array, # i-indeces of the eddy
                       'eddy_j': array # j-indeces of the eddy
@@ -365,21 +364,13 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             if eddi[e]['lat'] < 0:
                 if vort.isel(time=t).values[index].mean() < 0:
                     eddi[e]['type'] = 'cyclonic'
-                    eddi[e]['vort_extr'] = np.array(
-                        [vort.isel(time=t).values[index].min()])
                 elif vort.isel(time=t).values[index].mean() > 0:
                     eddi[e]['type'] = 'anticyclonic'
-                    eddi[e]['vort_extr'] = np.array(
-                        [vort.isel(time=t).values[index].max()])
             elif eddi[e]['lat'] >= 0:
                 if vort.isel(time=t).values[index].mean() > 0:
                     eddi[e]['type'] = 'cyclonic'
-                    eddi[e]['vort_extr'] = np.array(
-                        [vort.isel(time=t).values[index].max()])
                 elif vort.isel(time=t).values[index].mean() < 0:
                     eddi[e]['type'] = 'anticyclonic'
-                    eddi[e]['vort_extr'] = np.array(
-                        [vort.isel(time=t).values[index].min()])
             e += 1
         else:
             del eddi[e]
@@ -563,7 +554,6 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False):
                           'lat': array, # central latitude
                           'scale': array, # diameter of the eddy
                           'area': array, # area of the eddy
-                          'vort_extr': array, # vorticity max/min
                           'amp': array, # vorticity amplitude
                           'eddy_i': array, # i-indeces of the eddy
                           'eddy_j': array # j-indeces of the eddy
@@ -689,7 +679,6 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False):
                           'lat': array, # central latitude
                           'scale': array, # diameter of the eddy
                           'area': array, # area of the eddy
-                          'vort_extr': array, # vorticity max/min
                           'amp': array, # vorticity amplitude
                           'eddy_i': array, # i-indeces of the eddy
                           'eddy_j': array # j-indeces of the eddy
