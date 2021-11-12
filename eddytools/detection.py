@@ -410,6 +410,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
     e = 0
     eddi = {}
     for cyc in ['cyclonic','anticyclonic']:
+        print('now detecting ' + cyc)
         # ssh_crits increasing for 'anticyclonic', decreasing for 'cyclonic'
         # flip to start with largest positive value for 'cylonic'
         crit_len = int(len(ssh_crits) / 2)
@@ -444,6 +445,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                 interior = ndimage.binary_erosion(region)
                 exterior = region.astype(bool) ^ interior
                 if interior.sum() == 0:
+                    del eddi[e]
                     continue
                 if cyc == 'anticyclonic':
                     has_internal_ext = field[interior].max() > field[exterior].max()
@@ -458,6 +460,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
         # 5. Find maximum linear dimension of region, reject if < d_thresh
                 if np.logical_not( eddy_area_within_limits
                                    * has_internal_ext * is_tall_eddy):
+                    del eddi[e]
                     continue
                 lon_ext = llon[exterior]
                 lat_ext = llat[exterior]
