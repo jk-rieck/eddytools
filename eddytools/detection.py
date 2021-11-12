@@ -416,15 +416,13 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
     field = SSH.isel(time=t).values
     len_deg_lat = 111.325 # length of 1 degree of latitude [km]
     llon, llat = np.meshgrid(SSH.lon, SSH.lat)
+    ssh_crits = ssh_crits[ssh_crits >= det_param['ssh_thr']]
     # initialise eddy counter & output dict
     e = 0
     eddi = {}
-    for cyc in ['cyclonic','anticyclonic']:
+    for cyc in ['cyclonic', 'anticyclonic']:
         # ssh_crits increasing for 'anticyclonic', decreasing for 'cyclonic'
         # flip to start with largest positive value for 'cylonic'
-        crit_len = int(len(ssh_crits) / 2)
-        ssh_crits = ssh_crits[crit_len:]
-        ssh_crits = ssh_crits[ssh_crits >= det_param['ssh_thr']]
         if cyc == 'cyclonic':
             ssh_crits = -ssh_crits
         # loop over ssh_crits and remove interior pixels of detected eddies
@@ -456,9 +454,11 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     del eddi[e]
                     continue
                 if cyc == 'anticyclonic':
-                    has_internal_ext = field[interior].max() > field[exterior].max()
+                    has_internal_ext = (field[interior].max() >
+                                        field[exterior].max())
                 elif cyc == 'cyclonic':
-                    has_internal_ext = field[interior].min() < field[exterior].min()
+                    has_internal_ext = (field[interior].min() <
+                                        field[exterior].min())
         # 4. Find amplitude of region, reject if < amp_thresh
                 if cyc == 'anticyclonic':
                     amp = field[interior].max() - field[exterior].mean()
@@ -478,6 +478,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                 if (eddy_area_within_limits * has_internal_ext
                     * is_tall_eddy * is_small_eddy):
                     # find centre of mass of eddy
+                    print('found anticyclone')
                     eddy_object_with_mass = field * region
                     eddy_object_with_mass[np.isnan(eddy_object_with_mass)] = 0
                     j_cen, i_cen = ndimage.center_of_mass(eddy_object_with_mass)
@@ -728,7 +729,7 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False):
     e1f = maskandcut(data, e1f_name, det_param)
     e2f = maskandcut(data, e2f_name, det_param)
     ## create list of incremental threshold
-    ssh_crits = np.arange(-3 * det_param['ssh_thr'],
+    ssh_crits = np.arange(0,
                           3 * det_param['ssh_thr'] + det_param['dssh'] / 2,
                           det_param['dssh'])
     ssh_crits = np.sort(ssh_crits) # make sure its increasing order
