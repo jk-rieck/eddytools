@@ -496,11 +496,11 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     eddy_mask[interior.astype(int)==1] = np.nan
                     field = field * eddy_mask
                     eddi[e]['time'] = SSH.isel(time=t).time.values
-                    eddi[e]['lon'] = np.array(lon_cen)
-                    eddi[e]['lat'] = np.array(lat_cen)
-                    eddi[e]['amp'] = np.array(amp)
-                    eddi[e]['area'] = np.array(area)
-                    eddi[e]['scale'] = np.array(scale)
+                    eddi[e]['lon'] = np.array([lon_cen])
+                    eddi[e]['lat'] = np.array([lat_cen])
+                    eddi[e]['amp'] = np.array([amp])
+                    eddi[e]['area'] = np.array([area])
+                    eddi[e]['scale'] = np.array([scale])
                     eddi[e]['type'] = cyc
                     e += 1
                 else:
