@@ -423,10 +423,10 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
         # ssh_crits increasing for 'anticyclonic', decreasing for 'cyclonic'
         # flip to start with largest positive value for 'cylonic'
         crit_len = int(len(ssh_crits) / 2)
+        ssh_crits = ssh_crits[crit_len:]
+        ssh_crits = ssh_crits[ssh_crits >= detection_parameters['ssh_thr']]
         if cyc == 'cyclonic':
-            ssh_crits = np.flipud(ssh_crits)[crit_len:]
-        if cyc == 'anticyclonic':
-            ssh_crits = ssh_crits[crit_len:]
+            ssh_crits = -ssh_crits
         # loop over ssh_crits and remove interior pixels of detected eddies
         # from subsequent loop steps
         for ssh_crit in ssh_crits:
@@ -435,7 +435,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
         # criterion 1)
             if cyc == 'anticyclonic':
                 regions, nregions = ndimage.label(
-                    (field < ssh_crit).astype(int))
+                    (field > ssh_crit).astype(int))
             elif cyc == 'cyclonic':
                 regions, nregions = ndimage.label(
                     (field < ssh_crit).astype(int))
@@ -728,8 +728,8 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False):
     e1f = maskandcut(data, e1f_name, det_param)
     e2f = maskandcut(data, e2f_name, det_param)
     ## create list of incremental threshold
-    ssh_crits = np.arange(-det_param['ssh_thr'],
-                          det_param['ssh_thr'] + det_param['dssh'],
+    ssh_crits = np.arange(-3 * det_param['ssh_thr'],
+                          3 * det_param['ssh_thr'] + det_param['dssh'] / 2,
                           det_param['dssh'])
     ssh_crits = np.sort(ssh_crits) # make sure its increasing order
     if use_bags:
