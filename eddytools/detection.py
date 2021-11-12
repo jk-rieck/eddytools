@@ -319,17 +319,6 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             # If the region is not too small and not too big, extract
             # eddy information
             eddi[e]['time'] = OW.isel(time=t)['time'].values
-            # get eddy type from Vorticity and store extrema
-            # Note this is written for the Southern Hemisphere
-            # Need to generalize it!
-            if vort.isel(time=t).values[index].mean() < 0:
-                eddi[e]['type'] = 'cyclonic'
-                eddi[e]['vort_extr'] = np.array(
-                    [vort.isel(time=t).values[index].max()])
-            elif vort.isel(time=t).values[index].mean() > 0:
-                eddi[e]['type'] = 'anticyclonic'
-                eddi[e]['vort_extr'] = np.array(
-                    [vort.isel(time=t).values[index].min()])
             # calc vorticity amplitude
             eddi[e]['amp'] = np.array(
                 [vort.isel(time=t).values[index].max()
@@ -370,6 +359,27 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
                                          * (e2f.values[index] / 1000.)).sum()])
             eddi[e]['scale'] = np.array([np.sqrt(eddi[e]['area']
                                          / np.pi)])  # [km]
+            # get eddy type from Vorticity and store extrema
+            # Note this is written for the Southern Hemisphere
+            # Need to generalize it!
+            if eddi[e]['lat'] < 0:
+                if vort.isel(time=t).values[index].mean() < 0:
+                    eddi[e]['type'] = 'cyclonic'
+                    eddi[e]['vort_extr'] = np.array(
+                        [vort.isel(time=t).values[index].min()])
+                elif vort.isel(time=t).values[index].mean() > 0:
+                    eddi[e]['type'] = 'anticyclonic'
+                    eddi[e]['vort_extr'] = np.array(
+                        [vort.isel(time=t).values[index].max()])
+            elif eddi[e]['lat'] >= 0:
+                if vort.isel(time=t).values[index].mean() > 0:
+                    eddi[e]['type'] = 'cyclonic'
+                    eddi[e]['vort_extr'] = np.array(
+                        [vort.isel(time=t).values[index].max()])
+                elif vort.isel(time=t).values[index].mean() < 0:
+                    eddi[e]['type'] = 'anticyclonic'
+                    eddi[e]['vort_extr'] = np.array(
+                        [vort.isel(time=t).values[index].min()])
             e += 1
         else:
             del eddi[e]
@@ -429,7 +439,6 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
             elif cyc == 'cyclonic':
                 regions, nregions = ndimage.label(
                     (field < ssh_crit).astype(int))
-
             for iregion in list(range(nregions)):
                 eddi[e] = {}
         # 2. Calculate number of pixels comprising detected region, reject if
@@ -496,6 +505,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     eddi[e]['amp'] = np.array(amp)
                     eddi[e]['area'] = np.array(area)
                     eddi[e]['scale'] = np.array(scale)
+                    eddi[e]['type'] = cyc
                     e += 1
                 else:
                     del eddi[e]
