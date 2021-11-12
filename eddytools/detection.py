@@ -456,12 +456,14 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                 if cyc == 'anticyclonic':
                     has_internal_ext = (field[interior].max() >
                                         field[exterior].max())
+                    print('ext is good')
                 elif cyc == 'cyclonic':
                     has_internal_ext = (field[interior].min() <
                                         field[exterior].min())
         # 4. Find amplitude of region, reject if < amp_thresh
                 if cyc == 'anticyclonic':
                     amp = field[interior].max() - field[exterior].mean()
+                    print('amp is good')
                 elif cyc == 'cyclonic':
                     amp = field[exterior].mean() - field[interior].min()
                 is_tall_eddy = amp >= det_param['amp_thr']
@@ -478,7 +480,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                 if (eddy_area_within_limits * has_internal_ext
                     * is_tall_eddy * is_small_eddy):
                     # find centre of mass of eddy
-                    if cyc == 'anticyclone':
+                    if cyc == 'anticyclonic':
                         print('found anticyclone at time ' + t)
                     eddy_object_with_mass = field * region
                     eddy_object_with_mass[np.isnan(eddy_object_with_mass)] = 0
