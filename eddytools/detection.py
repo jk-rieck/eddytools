@@ -478,7 +478,8 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                 if (eddy_area_within_limits * has_internal_ext
                     * is_tall_eddy * is_small_eddy):
                     # find centre of mass of eddy
-                    print('found anticyclone')
+                    if cyc == 'anticyclone':
+                        print('found anticyclone at time ' + t)
                     eddy_object_with_mass = field * region
                     eddy_object_with_mass[np.isnan(eddy_object_with_mass)] = 0
                     j_cen, i_cen = ndimage.center_of_mass(eddy_object_with_mass)
