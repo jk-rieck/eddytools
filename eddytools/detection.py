@@ -424,7 +424,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
         # flip to start with largest positive value for 'cylonic'
         crit_len = int(len(ssh_crits) / 2)
         ssh_crits = ssh_crits[crit_len:]
-        ssh_crits = ssh_crits[ssh_crits >= detection_parameters['ssh_thr']]
+        ssh_crits = ssh_crits[ssh_crits >= det_param['ssh_thr']]
         if cyc == 'cyclonic':
             ssh_crits = -ssh_crits
         # loop over ssh_crits and remove interior pixels of detected eddies
