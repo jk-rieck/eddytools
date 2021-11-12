@@ -413,14 +413,14 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
             scale: scale of the detected eddies (see Chelton et al. 2011)
     '''
     #set up grid
-    field = SSH.isel(time=t).values
     len_deg_lat = 111.325 # length of 1 degree of latitude [km]
     llon, llat = np.meshgrid(SSH.lon, SSH.lat)
     ssh_crits = ssh_crits[ssh_crits >= det_param['ssh_thr']]
     # initialise eddy counter & output dict
     e = 0
     eddi = {}
-    for cyc in ['cyclonic', 'anticyclonic']:
+    for cyc in ['anticyclonic', 'cyclonic']:
+        field = SSH.isel(time=t).values
         # ssh_crits increasing for 'anticyclonic', decreasing for 'cyclonic'
         # flip to start with largest positive value for 'cylonic'
         if cyc == 'cyclonic':
@@ -464,17 +464,8 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     amp = field[interior].max() - field[exterior].mean()
                 elif cyc == 'cyclonic':
                     amp = field[exterior].mean() - field[interior].min()
-                is_tall_eddy = amp >= det_param['amp_thr']
+                is_tall_eddy = (amp >= det_param['amp_thr'])
         # 5. Find maximum linear dimension of region, reject if < d_thresh
-                if np.logical_not( eddy_area_within_limits
-                                   * has_internal_ext * is_tall_eddy):
-                    del eddi[e]
-                    continue
-                if cyc == 'anticyclonic':
-                    print("still here, eddy is right size: "
-                          + str(eddy_area_within_limits) + ", has ext: "
-                          + str(has_internal_ext) + ", is tall: "
-                          + str(is_tall_eddy))
                 lon_ext = llon[exterior]
                 lat_ext = llat[exterior]
                 d = distance_matrix(lon_ext, lat_ext)
