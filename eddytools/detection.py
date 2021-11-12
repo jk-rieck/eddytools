@@ -410,7 +410,10 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
     e = 0
     eddi = {}
     for cyc in ['cyclonic','anticyclonic']:
-        print('now detecting ' + cyc)
+        if cyc == 'cyclonic':
+            southern_cyc = 'anticyclonic'
+        elif cyc == 'anticylonic':
+            southern_cyc = 'cyclonic'
         # ssh_crits increasing for 'anticyclonic', decreasing for 'cyclonic'
         # flip to start with largest positive value for 'cylonic'
         crit_len = int(len(ssh_crits) / 2)
@@ -426,7 +429,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
         # criterion 1)
             if cyc == 'anticyclonic':
                 regions, nregions = ndimage.label(
-                    (field > ssh_crit).astype(int))
+                    (field < ssh_crit).astype(int))
             elif cyc == 'cyclonic':
                 regions, nregions = ndimage.label(
                     (field < ssh_crit).astype(int))
@@ -497,7 +500,10 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     eddi[e]['amp'] = np.array(amp)
                     eddi[e]['area'] = np.array(area)
                     eddi[e]['scale'] = np.array(scale)
-                    eddi[e]['type'] = cyc
+                    if eddi[e]['lat'] > 0:
+                        eddi[e]['type'] = cyc
+                    else:
+                        eddi[e]['type'] = southern_cyc
                     e += 1
                 else:
                     del eddi[e]
