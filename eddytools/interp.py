@@ -104,8 +104,8 @@ def horizontal(data, metrics, int_param):
         or int_param['lat1'] > np.around(data[dat_lat].max())):
         raise ValueError('`int_param`: there is no overlap of the original grid'
                          + ' and the latitudes to interpolate to')
-    if (int_param['start_time'] > data[dat_time][-1]
-        or int_param['end_time'] < data[dat_time][0]):
+    if (np.datetime64(int_param['start_time']) > data[dat_time][-1]
+        or np.datetime64(int_param['end_time']) < data[dat_time][0]):
         raise ValueError('`int_param`: there is no overlap of the original time'
                          + ' axis and the desired time range for the'
                          + ' interpolated data')
