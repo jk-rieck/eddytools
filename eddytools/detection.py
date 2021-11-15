@@ -303,7 +303,7 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
     e = 0
     for iregion in list(range(nregions - 1)):
         index = region_index[iregion + 1]
-        region = (regions==iregion+1).astype(int)
+        region = (regions == iregion + 1).astype(int)
         # Loop through all regions detected as eddy at each time step
         eddi[e] = {}
         # Calculate number of pixels comprising detected region, reject if
@@ -453,13 +453,14 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
             elif cyc == 'cyclonic':
                 regions, nregions = ndimage.label(
                     (field < ssh_crit).astype(int))
+            region_index = get_indeces(regions)
             for iregion in list(range(nregions)):
                 eddi[e] = {}
         # 2. Calculate number of pixels comprising detected region, reject if
         # not within [Npix_min, Npix_max]
                 region = (regions==iregion+1).astype(int)
                 region_Npix = region.sum()
-                index = get_indeces(region)
+                index = region_index[iregion + 1]
                 eddy_area_within_limits = (
                     (region_Npix < det_param['Npix_max'])
                     * (region_Npix > det_param['Npix_min']))
@@ -497,7 +498,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                                      & (Ypix_cen > min_width))
         # Detected eddies:
                 if (eddy_area_within_limits * has_internal_ext
-                    * is_tall_eddy * is_small_eddy):# * eddy_not_too_thin):
+                    * is_tall_eddy * is_small_eddy * eddy_not_too_thin):
                     # find centre of mass of eddy
                     # find centre of mass of eddy
                     iimin = index[1].min()
