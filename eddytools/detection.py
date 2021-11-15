@@ -497,7 +497,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                                      & (Ypix_cen > min_width))
         # Detected eddies:
                 if (eddy_area_within_limits * has_internal_ext
-                    * is_tall_eddy * is_small_eddy * eddy_not_too_thin):
+                    * is_tall_eddy * is_small_eddy):# * eddy_not_too_thin):
                     # find centre of mass of eddy
                     # find centre of mass of eddy
                     iimin = index[1].min()
