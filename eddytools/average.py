@@ -80,8 +80,10 @@ def prepare(sampled, vars, lon_int=101, method='nearest'):
         Dictionary containing the eddies to be averaged.
     vars : dict
         Variables to average for every single eddy.
-    lon_int: int
-        Length of the normalized longitude vector to interpolate to
+    lon_int : int
+        Length of the normalized longitude vector to interpolate to.
+    method : str
+        Interpolation method.
 
     Returns
     -------
