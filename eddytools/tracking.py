@@ -779,8 +779,8 @@ def track(tracking_params, in_file=True):
         ed_end_time = cft.Datetime360Day(int(str(eddies_time[-1])[0:4]),
                                          int(str(eddies_time[-1])[5:7]),
                                          int(str(eddies_time[-1])[8:10]))
-    if (start_time > ed_start_time
-        or end_time < ed_end_time):
+    if (start_time > ed_end_time
+        or end_time < ed_start_time):
         raise ValueError('`trac_param`: there are no eddies found within'
                          + ' the range of dates specified in'
                          + ' `trac_param`')
