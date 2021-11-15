@@ -761,12 +761,12 @@ def track(tracking_params, in_file=True):
     # Preparation with `prepare()`
     eddies_time, rossrad, trac_param = prepare(tracking_params)
     # Check if there are eddies within the time range specified
-    if det_param['calendar'] == 'standard':
+    if trac_param['calendar'] == 'standard':
         start_time = np.datetime64(trac_param['start_time'])
         end_time = np.datetime64(trac_param['end_time'])
         ed_start_time = np.datetime64(eddies_time[0])
         ed_end_time = np.datetime64(eddies_time[-1])
-    elif det_param['calendar'] == '360_day':
+    elif trac_param['calendar'] == '360_day':
         start_time = cft.Datetime360Day(int(trac_param['start_time'][0:4]),
                                         int(trac_param['start_time'][5:7]),
                                         int(trac_param['start_time'][8:10]))
