@@ -367,6 +367,7 @@ def seasonal(eddies, variables):
 
 def monthly(eddies, variables):
     out = {}
+    center = 0
     months = ['01', '02', '03', '04', '05', '06',
               '07', '08', '09', '10', '11', '12']
     i = 0
@@ -445,6 +446,7 @@ def monthly(eddies, variables):
 def total(eddies, variables):
     m_eddies = monthly(eddies, variables)
     out = {}
+    center = 0
     months = ['01', '02', '03', '04', '05', '06',
               '07', '08', '09', '10', '11', '12']
     i = 0
