@@ -762,17 +762,17 @@ def track(tracking_params, in_file=True):
     eddies_time, rossrad, trac_param = prepare(tracking_params)
     # Check if there are eddies within the time range specified
     if det_param['calendar'] == 'standard':
-        start_time = np.datetime64(det_param['start_time'])
-        end_time = np.datetime64(det_param['end_time'])
+        start_time = np.datetime64(trac_param['start_time'])
+        end_time = np.datetime64(trac_param['end_time'])
         ed_start_time = np.datetime64(eddies_time[0])
         ed_end_time = np.datetime64(eddies_time[-1])
     elif det_param['calendar'] == '360_day':
-        start_time = cft.Datetime360Day(int(det_param['start_time'][0:4]),
-                                        int(det_param['start_time'][5:7]),
-                                        int(det_param['start_time'][8:10]))
-        end_time = cft.Datetime360Day(int(det_param['end_time'][0:4]),
-                                      int(det_param['end_time'][5:7]),
-                                      int(det_param['end_time'][8:10]))
+        start_time = cft.Datetime360Day(int(trac_param['start_time'][0:4]),
+                                        int(trac_param['start_time'][5:7]),
+                                        int(trac_param['start_time'][8:10]))
+        end_time = cft.Datetime360Day(int(trac_param['end_time'][0:4]),
+                                      int(trac_param['end_time'][5:7]),
+                                      int(trac_param['end_time'][8:10]))
         ed_start_time = cft.Datetime360Day(int(str(eddies_time[0])[0:4]),
                                            int(str(eddies_time[0])[5:7]),
                                            int(str(eddies_time[0])[8:10]))
@@ -781,9 +781,9 @@ def track(tracking_params, in_file=True):
                                          int(str(eddies_time[-1])[8:10]))
     if (start_time > ed_start_time
         or end_time < ed_end_time):
-        raise ValueError('`tracking_param`: there are no eddies found within'
+        raise ValueError('`trac_param`: there are no eddies found within'
                          + ' the range of dates specified in'
-                         + ' `tracking_params`')
+                         + ' `trac_param`')
     # Initialize `tracks` with all eddies at t=0
     terminated_list = []
     tracks = []
