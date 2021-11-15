@@ -4,7 +4,7 @@ Python package to detect, track, sample, cluster, and average eddies and their p
 
 Based on work by Tobias Schulzki, Klaus Getzlaff and Rafael Abel. The original algorithm was implemented by [Eric Oliver](https://github.com/ecjoliver/eddyTracking) and further developed by [Christopher Bull](https://github.com/chrisb13/eddyTracking). It is based on the algorithm described in [Chelton et al. (2011)](https://doi.org/10.1016/j.pocean.2011.01.002). The original eddy detection and tracking routines are described in [Oliver et al. (2015)](https://doi.org/10.1002/2015JC010993). The contributions by Tobias Schulzki, Klaus Getzlaff and Rafael Abel are documented [here](https://git.geomar.de/Eddy_tracking/WGC_Eddies).   
 
-The package works based on output loaded with  `load_xorca_dataset` from the [xorca](https://github.com/willirath/xorca) module and additionally requires [xgcm](https://github.com/xgcm/xgcm).   
+The package works based on output loaded with  `load_xorca_dataset` from the [xorca](https://github.com/willirath/xorca) module (for NEMO model output) or [`xmitgcm`](https://xmitgcm.readthedocs.io/en/latest/) (for MITgcm model output) and additionally requires [xgcm](https://github.com/xgcm/xgcm).   
 
 
 ## Install a minimal environment
@@ -30,7 +30,7 @@ pip install -e .
 
 2. Install from the repository using
   ```shell
-  pip install git+https://git.geomar.de/jan-klaus-rieck/eddytools.git@master
+  pip install git+https://git.geomar.de/jrieck-archive/eddytools.git@v0.1
   ```
 
 ## Usage
