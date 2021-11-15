@@ -188,6 +188,20 @@ def prepare(sampled, vars, lon_int=101, method='nearest'):
 
 def seasonal(eddies, variables):
     out = {}
+    center = 0
+    months = ['01', '02', '03', '04', '05', '06',
+              '07', '08', '09', '10', '11', '12']
+    i = 0
+    while center == 0:
+        try:
+            center = int(np.floor(np.shape(
+                        eddies[variables[0]][months[i]])[-1] / 2))
+        except:
+            if months[i] == '12':
+                raise ValueError('No eddies found.')
+            else:
+                i += 1
+                continue
     for meth in ['ave', 'evo']:
         out[meth] = {}
         for quant in ['count', 'mean', 'std']:
@@ -236,7 +250,7 @@ def seasonal(eddies, variables):
                             if meth == 'ave':
                                 ar = array[:, 0, :, :]
                             elif meth == 'evo':
-                                ar = array[:, :, :, 50]
+                                ar = array[:, :, :, center]
                             return ar
 
                         def extract_around(array):
@@ -249,7 +263,7 @@ def seasonal(eddies, variables):
                             if meth == 'ave':
                                 ar = array[:, 0, :]
                             elif meth == 'evo':
-                                ar = array[:, :, 50]
+                                ar = array[:, :, center]
                             return ar
 
                         def extract_around(array):
@@ -353,6 +367,19 @@ def seasonal(eddies, variables):
 
 def monthly(eddies, variables):
     out = {}
+    months = ['01', '02', '03', '04', '05', '06',
+              '07', '08', '09', '10', '11', '12']
+    i = 0
+    while center == 0:
+        try:
+            center = int(np.floor(np.shape(
+                        eddies[variables[0]][months[i]])[-1] / 2))
+        except:
+            if months[i] == '12':
+                raise ValueError('No eddies found.')
+            else:
+                i += 1
+                continue
     for meth in ['ave', 'evo']:
         out[meth] = {}
         for quant in ['mean', 'std', 'count']:
@@ -372,8 +399,7 @@ def monthly(eddies, variables):
                 def function(array):
                     return np.count_nonzero(~np.isnan(array), axis=0)
 
-            for m in ['01', '02', '03', '04', '05', '06',
-                      '07', '08', '09', '10', '11', '12']:
+            for m in months:
                 out[meth][quant][m] = {}
                 for var in variables:
                     crit = (np.abs(eddies[var + '_anom'][m])
@@ -387,7 +413,7 @@ def monthly(eddies, variables):
                             if meth == 'ave':
                                 ar = array[:, 0, :, :]
                             elif meth == 'evo':
-                                ar = array[:, :, :, 50]
+                                ar = array[:, :, :, center]
                             return ar
 
                         def extract_around(array):
@@ -400,7 +426,7 @@ def monthly(eddies, variables):
                             if meth == 'ave':
                                 ar = array[:, 0, :]
                             elif meth == 'evo':
-                                ar = array[:, :, 50]
+                                ar = array[:, :, center]
                             return ar
 
                         def extract_around(array):
@@ -419,6 +445,19 @@ def monthly(eddies, variables):
 def total(eddies, variables):
     m_eddies = monthly(eddies, variables)
     out = {}
+    months = ['01', '02', '03', '04', '05', '06',
+              '07', '08', '09', '10', '11', '12']
+    i = 0
+    while center == 0:
+        try:
+            center = int(np.floor(np.shape(
+                        eddies[variables[0]][months[i]])[-1] / 2))
+        except:
+            if months[i] == '12':
+                raise ValueError('No eddies found.')
+            else:
+                i += 1
+                continue
     for meth in ['ave', 'evo']:
         out[meth] = {}
         for quant in ['count', 'mean', 'std']:
@@ -441,8 +480,7 @@ def total(eddies, variables):
                     out[meth][quant][var + '_around'] =\
                         (m_eddies[meth][quant]['01'][var + '_around']
                          * m_eddies[meth]['count']['01'][var + '_around'])
-                for m in ['02', '03', '04', '05', '06',
-                          '07', '08', '09', '10', '11', '12']:
+                for m in months:
                     if quant == 'count':
                         out[meth][quant][var + '_anom'] =\
                             (out[meth][quant][var + '_anom']
