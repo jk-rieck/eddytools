@@ -228,6 +228,8 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
         det_param = {
             'model': 'model_name', # either ORCA or MITgcm
             'grid': 'latlon', # either latlon or cartesian
+            'hemi': 'south', # hemisphere of the grid in case it cannot be
+                             # inferred from lat information
             'start_time': 'YYYY-MM-DD', # time range start
             'end_time': 'YYYY-MM-DD', # time range end
             'calendar': 'standard', # calendar, must be either 360_day or
@@ -372,16 +374,28 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             eddi[e]['scale'] = np.array([np.sqrt(eddi[e]['area']
                                          / np.pi)])  # [km]
             # get eddy type from Vorticity and store extrema
-            if eddi[e]['lat'] < 0:
-                if vort.isel(time=t).values[index].mean() < 0:
-                    eddi[e]['type'] = 'cyclonic'
-                elif vort.isel(time=t).values[index].mean() > 0:
-                    eddi[e]['type'] = 'anticyclonic'
-            elif eddi[e]['lat'] >= 0:
-                if vort.isel(time=t).values[index].mean() > 0:
-                    eddi[e]['type'] = 'cyclonic'
-                elif vort.isel(time=t).values[index].mean() < 0:
-                    eddi[e]['type'] = 'anticyclonic'
+            if det_param['grid'] == 'latlon':
+                if eddi[e]['lat'] < 0:
+                    if vort.isel(time=t).values[index].mean() < 0:
+                        eddi[e]['type'] = 'cyclonic'
+                    elif vort.isel(time=t).values[index].mean() > 0:
+                        eddi[e]['type'] = 'anticyclonic'
+                elif eddi[e]['lat'] >= 0:
+                    if vort.isel(time=t).values[index].mean() > 0:
+                        eddi[e]['type'] = 'cyclonic'
+                    elif vort.isel(time=t).values[index].mean() < 0:
+                        eddi[e]['type'] = 'anticyclonic'
+            elif det_param['grid'] == 'cartesian':
+                if det_param['hemi'] == 'south':
+                    if vort.isel(time=t).values[index].mean() < 0:
+                        eddi[e]['type'] = 'cyclonic'
+                    elif vort.isel(time=t).values[index].mean() > 0:
+                        eddi[e]['type'] = 'anticyclonic'
+                elif det_param['hemi'] == 'north':
+                    if vort.isel(time=t).values[index].mean() > 0:
+                        eddi[e]['type'] = 'cyclonic'
+                    elif vort.isel(time=t).values[index].mean() < 0:
+                        eddi[e]['type'] = 'anticyclonic'
             e += 1
         else:
             del eddi[e]
