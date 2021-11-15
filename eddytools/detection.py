@@ -533,7 +533,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     # assign (and calculated) amplitude, area, and scale of
                     # eddies
                     len_deg_lon = ((np.pi/180.) * 6371
-                                   * np.cos( lat_cen * np.pi/180. )) #[km]
+                                   * np.cos( lat_eddies * np.pi/180. )) #[km]
                     area = (region_Npix * det_param['res'] ** 2
                             * len_deg_lat * len_deg_lon)
                     # [km**2]
