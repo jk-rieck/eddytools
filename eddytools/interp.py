@@ -16,6 +16,7 @@ import xarray as xr
 import xesmf as xe
 import xgcm
 from scipy import ndimage
+import cftime as cft
 
 
 def horizontal(data, metrics, int_param):
