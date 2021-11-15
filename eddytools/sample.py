@@ -797,8 +797,8 @@ def sample(tracks, data, sample_param):
     computed_data, lifetime, start_time, end_time = prepare(data,
                                                             sample_param,
                                                             tracks)
-    if (start_time > tracks[len(tracks) - 1]['time']
-        or end_time < tracks[0]['time']):
+    if (start_time > tracks[len(tracks) - 1]['time'][-1]
+        or end_time < tracks[0]['time'][0]):
         raise ValueError('The range of dates specified in `sample_param` does'
                          + ' not overlap with the dates of the eddy tracks'
                          + ' provided.')
