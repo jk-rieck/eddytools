@@ -358,7 +358,7 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             elif vort.isel(time=t).values[interior].mean() < 0:
                 amp = (vort.isel(time=t).values[exterior].mean()
                        - vort.isel(time=t).values[interior].min())
-            eddi[e]['amp'] = amp
+            eddi[e]['amp'] = np.array([amp])
             # store all eddy indices
             j_min = (data.lat.where(data.lat == OW.lat.min(), other=0)
                      ** 2).argmax().values
