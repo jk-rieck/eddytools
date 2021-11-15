@@ -8,7 +8,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 
-def interp(sampled, v, t, anom=True):
+def interp(sampled, v, t, lon_interp, method, anom=True):
     '''Interpolate the normalized longitudes onto a common vector.
 
     Parameters
@@ -19,6 +19,8 @@ def interp(sampled, v, t, anom=True):
         Name of the variable to interpolate.
     t : int
         Time step in `sampled` to interpolate.
+    lon_interp : array
+        Longitude values to interpolate to
     anom : bool
         Whether or not the anomalies should be interpolated. Default is True.
 
@@ -28,7 +30,6 @@ def interp(sampled, v, t, anom=True):
         Section of `v` interpolated onto common normalized longitude
         vector.
     '''
-    lon_interp = np.arange(-0.5, 0.501, 0.01)
     if anom:
         if len(np.shape(sampled[v + '_sec'].isel(time=t).squeeze())) == 2:
             interp_lon = interp1d(
@@ -37,7 +38,7 @@ def interp(sampled, v, t, anom=True):
                 sampled[v + '_sec'].isel(time=t)
                 .dropna('sec_index', how='all').squeeze()
                 - sampled[v + '_around'].isel(time=t),
-                axis=1, fill_value="extrapolate"
+                axis=1, fill_value="extrapolate", kind=method
                 )
         elif len(np.shape(sampled[v + '_sec'].isel(time=t).squeeze())) == 1:
             interp_lon = interp1d(
@@ -46,7 +47,7 @@ def interp(sampled, v, t, anom=True):
                 sampled[v + '_sec'].isel(time=t)
                 .dropna('sec_index', how='all').squeeze()
                 - sampled[v + '_around'].isel(time=t),
-                axis=0, fill_value="extrapolate"
+                axis=0, fill_value="extrapolate", kind=method
                 )
     else:
         if len(np.shape(sampled[v + '_sec'].isel(time=t).squeeze())) == 2:
@@ -55,7 +56,7 @@ def interp(sampled, v, t, anom=True):
                 .dropna('sec_index', how='all'),
                 sampled[v + '_sec'].isel(time=t)
                 .dropna('sec_index', how='all').squeeze(),
-                axis=1, fill_value="extrapolate"
+                axis=1, fill_value="extrapolate", kind=method
                 )
         elif len(np.shape(sampled[v + '_sec'].isel(time=t).squeeze())) == 1:
             interp_lon = interp1d(
@@ -63,12 +64,12 @@ def interp(sampled, v, t, anom=True):
                 .dropna('sec_index', how='all'),
                 sampled[v + '_sec'].isel(time=t)
                 .dropna('sec_index', how='all').squeeze(), axis=0,
-                fill_value="extrapolate"
+                fill_value="extrapolate", kind=method
                 )
     return interp_lon(lon_interp)
 
 
-def prepare(sampled, vars):
+def prepare(sampled, vars, lon_int=101, method='nearest'):
     ''' Preparation for the averaging of eddy sections to construct a mean
     eddy (that still has a temporal evolution). Only anomalies to the eddy's
     surrounding are considered.
@@ -79,6 +80,10 @@ def prepare(sampled, vars):
         Dictionary containing the eddies to be averaged.
     vars : dict
         Variables to average for every single eddy.
+    lon_int : int
+        Length of the normalized longitude vector to interpolate to.
+    method : str
+        Interpolation method.
 
     Returns
     -------
@@ -89,7 +94,7 @@ def prepare(sampled, vars):
         dimensions `(e, t, z, x)`, where `e` is the eddy number, `t` is the
         time step, `z` is the depth, and `x` is the longitude.
     '''
-    lon_interp = np.arange(-0.5, 0.501, 0.01)
+    lon_interp = np.linspace(-0.5, 0.5, lon_int)
     len_z = len(sampled[1]['depth'])
     max_time = 0
     for ed in np.arange(1, len(sampled) + 1):
@@ -135,9 +140,11 @@ def prepare(sampled, vars):
                 e = np.shape(aves[v + '_anom'][month])[0] - 1
                 for m in np.arange(0, len(sampled[ed]['time'])):
                     aves[v + '_anom'][month][e, m, :, :] =\
-                        interp(sampled[ed], v, m, anom=True)
+                        interp(sampled[ed], v, m, lon_interp,
+                               method=method, anom=True)
                     aves[v][month][e, m, :, :] =\
-                        interp(sampled[ed], v, m, anom=False)
+                        interp(sampled[ed], v, m, lon_interp,
+                               method=method, anom=False)
                     aves[v + '_around'][month][e, m, :] =\
                         sampled[ed][v + '_around'][m]
             elif len(np.shape(sampled[ed][v + '_sec'][0].squeeze())) == 1:
@@ -169,9 +176,11 @@ def prepare(sampled, vars):
                 e = np.shape(aves[v + '_anom'][month])[0] - 1
                 for m in np.arange(0, len(sampled[ed]['time'])):
                     aves[v + '_anom'][month][e, m, :] =\
-                        interp(sampled[ed], v, m, anom=True)
+                        interp(sampled[ed], v, m, lon_interp,
+                               method=method, anom=True)
                     aves[v][month][e, m, :] =\
-                        interp(sampled[ed], v, m, anom=False)
+                        interp(sampled[ed], v, m, lon_interp,
+                               method=method, anom=False)
                     aves[v + '_around'][month][e, m] =\
                         sampled[ed][v + '_around'][m]
     return aves
@@ -179,6 +188,20 @@ def prepare(sampled, vars):
 
 def seasonal(eddies, variables):
     out = {}
+    center = 0
+    months = ['01', '02', '03', '04', '05', '06',
+              '07', '08', '09', '10', '11', '12']
+    i = 0
+    while center == 0:
+        try:
+            center = int(np.floor(np.shape(
+                        eddies[variables[0]][months[i]])[-1] / 2))
+        except:
+            if months[i] == '12':
+                raise ValueError('No eddies found.')
+            else:
+                i += 1
+                continue
     for meth in ['ave', 'evo']:
         out[meth] = {}
         for quant in ['count', 'mean', 'std']:
@@ -227,7 +250,7 @@ def seasonal(eddies, variables):
                             if meth == 'ave':
                                 ar = array[:, 0, :, :]
                             elif meth == 'evo':
-                                ar = array[:, :, :, 50]
+                                ar = array[:, :, :, center]
                             return ar
 
                         def extract_around(array):
@@ -240,7 +263,7 @@ def seasonal(eddies, variables):
                             if meth == 'ave':
                                 ar = array[:, 0, :]
                             elif meth == 'evo':
-                                ar = array[:, :, 50]
+                                ar = array[:, :, center]
                             return ar
 
                         def extract_around(array):
@@ -344,6 +367,20 @@ def seasonal(eddies, variables):
 
 def monthly(eddies, variables):
     out = {}
+    center = 0
+    months = ['01', '02', '03', '04', '05', '06',
+              '07', '08', '09', '10', '11', '12']
+    i = 0
+    while center == 0:
+        try:
+            center = int(np.floor(np.shape(
+                        eddies[variables[0]][months[i]])[-1] / 2))
+        except:
+            if months[i] == '12':
+                raise ValueError('No eddies found.')
+            else:
+                i += 1
+                continue
     for meth in ['ave', 'evo']:
         out[meth] = {}
         for quant in ['mean', 'std', 'count']:
@@ -363,8 +400,7 @@ def monthly(eddies, variables):
                 def function(array):
                     return np.count_nonzero(~np.isnan(array), axis=0)
 
-            for m in ['01', '02', '03', '04', '05', '06',
-                      '07', '08', '09', '10', '11', '12']:
+            for m in months:
                 out[meth][quant][m] = {}
                 for var in variables:
                     crit = (np.abs(eddies[var + '_anom'][m])
@@ -378,7 +414,7 @@ def monthly(eddies, variables):
                             if meth == 'ave':
                                 ar = array[:, 0, :, :]
                             elif meth == 'evo':
-                                ar = array[:, :, :, 50]
+                                ar = array[:, :, :, center]
                             return ar
 
                         def extract_around(array):
@@ -391,7 +427,7 @@ def monthly(eddies, variables):
                             if meth == 'ave':
                                 ar = array[:, 0, :]
                             elif meth == 'evo':
-                                ar = array[:, :, 50]
+                                ar = array[:, :, center]
                             return ar
 
                         def extract_around(array):
@@ -410,6 +446,20 @@ def monthly(eddies, variables):
 def total(eddies, variables):
     m_eddies = monthly(eddies, variables)
     out = {}
+    center = 0
+    months = ['01', '02', '03', '04', '05', '06',
+              '07', '08', '09', '10', '11', '12']
+    i = 0
+    while center == 0:
+        try:
+            center = int(np.floor(np.shape(
+                        eddies[variables[0]][months[i]])[-1] / 2))
+        except:
+            if months[i] == '12':
+                raise ValueError('No eddies found.')
+            else:
+                i += 1
+                continue
     for meth in ['ave', 'evo']:
         out[meth] = {}
         for quant in ['count', 'mean', 'std']:
@@ -432,8 +482,7 @@ def total(eddies, variables):
                     out[meth][quant][var + '_around'] =\
                         (m_eddies[meth][quant]['01'][var + '_around']
                          * m_eddies[meth]['count']['01'][var + '_around'])
-                for m in ['02', '03', '04', '05', '06',
-                          '07', '08', '09', '10', '11', '12']:
+                for m in months:
                     if quant == 'count':
                         out[meth][quant][var + '_anom'] =\
                             (out[meth][quant][var + '_anom']
