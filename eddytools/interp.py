@@ -76,6 +76,9 @@ def horizontal(data, metrics, int_param):
             print('Interpolating from model grid: ' + int_param['model'])
             m = True
             cart = True
+            dat_lon = 'XC'
+            dat_lat = 'YC'
+            dat_time = 'time'
     elif (int_param['model'] == 'ORCA'):
         if int_param['grid'] == 'cartesian':
             print('Grid ' + int_param['grid'] + ' not possible for model '
@@ -84,22 +87,25 @@ def horizontal(data, metrics, int_param):
             print('Interpolating from model grid: ' + int_param['model'])
             o = True
             latlon = True
+            dat_lon = 'nav_lon'
+            dat_lat = 'nav_lat'
+            dat_time = 'time_counter'
     else:
         print('Interpolation from model grid: ' + int_param['model']
               + ' not implemented!')
         return
     # Test whether dimensions of the data overlap with desired extent of the
     # interpolated data
-    if (int_param['lon2'] < np.around(data['lon'].min())
-        or int_param['lon1'] > np.around(data['lon'].max())):
+    if (int_param['lon2'] < np.around(data[dat_lon].min())
+        or int_param['lon1'] > np.around(data[dat_lon].max())):
         raise ValueError('`int_param`: there is no overlap of the original grid'
                          + ' and the longitudes to interpolate to')
-    if (int_param['lat2'] < np.around(data['lat'].min())
-        or int_param['lat1'] > np.around(data['lat'].max())):
+    if (int_param['lat2'] < np.around(data[dat_lat].min())
+        or int_param['lat1'] > np.around(data[dat_lat].max())):
         raise ValueError('`int_param`: there is no overlap of the original grid'
                          + ' and the latitudes to interpolate to')
-    if (int_param['start_time'] > data['time'][-1]
-        or int_param['end_time'] < data['time'][0]):
+    if (int_param['start_time'] > data[dat_time][-1]
+        or int_param['end_time'] < data[dat_time][0]):
         raise ValueError('`int_param`: there is no overlap of the original time'
                          + ' axis and the desired time range for the'
                          + ' interpolated data')
