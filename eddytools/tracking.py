@@ -13,6 +13,7 @@ import operator
 import pandas as pd
 import xarray as xr
 import pickle
+import cftime as cft
 
 
 def load_rossrad(input_path):

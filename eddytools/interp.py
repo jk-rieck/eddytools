@@ -16,6 +16,7 @@ import xarray as xr
 import xesmf as xe
 import xgcm
 from scipy import ndimage
+import cftime as cft
 
 
 def horizontal(data, metrics, int_param):
@@ -76,6 +77,9 @@ def horizontal(data, metrics, int_param):
             print('Interpolating from model grid: ' + int_param['model'])
             m = True
             cart = True
+            dat_lon = 'XC'
+            dat_lat = 'YC'
+            dat_time = 'time'
     elif (int_param['model'] == 'ORCA'):
         if int_param['grid'] == 'cartesian':
             print('Grid ' + int_param['grid'] + ' not possible for model '
@@ -84,14 +88,43 @@ def horizontal(data, metrics, int_param):
             print('Interpolating from model grid: ' + int_param['model'])
             o = True
             latlon = True
+            dat_lon = 'nav_lon'
+            dat_lat = 'nav_lat'
+            dat_time = 'time_counter'
     else:
         print('Interpolation from model grid: ' + int_param['model']
               + ' not implemented!')
         return
+    # Test whether dimensions of the data overlap with desired extent of the
+    # interpolated data
+    if (int_param['lon2'] < np.around(data[dat_lon].min())
+        or int_param['lon1'] > np.around(data[dat_lon].max())):
+        raise ValueError('`int_param`: there is no overlap of the original grid'
+                         + ' and the longitudes to interpolate to')
+    if (int_param['lat2'] < np.around(data[dat_lat].min())
+        or int_param['lat1'] > np.around(data[dat_lat].max())):
+        raise ValueError('`int_param`: there is no overlap of the original grid'
+                         + ' and the latitudes to interpolate to')
+    if int_param['calendar'] == 'standard':
+        start_time = np.datetime64(int_param['start_time'])
+        end_time = np.datetime64(int_param['end_time'])
+    elif int_param['calendar'] == '360_day':
+        start_time = cft.Datetime360Day(int(int_param['start_time'][0:4]),
+                                        int(int_param['start_time'][5:7]),
+                                        int(int_param['start_time'][8:10]))
+        end_time = cft.Datetime360Day(int(int_param['end_time'][0:4]),
+                                      int(int_param['end_time'][5:7]),
+                                      int(int_param['end_time'][8:10]))
+    if (start_time > data[dat_time][-1]
+        or end_time < data[dat_time][0]):
+        raise ValueError('`int_param`: there is no overlap of the original time'
+                         + ' axis and the desired time range for the'
+                         + ' interpolated data')
     # Define the names of the variables in the corresponding model/grid
     # combination. Then add 2 degrees (ORCA) or 200km (MITgcm) in longitude and
     # 1 degree (ORCA) or 100km (MITgcm) in latitude in every direction of the
-    # region to make computations of the surroundings of eddies at the regions # boundary possible.
+    # region to make computations of the surroundings of eddies at the regions
+    # boundary possible.
     if cart:
         if m:
             x_r = 'XG'
