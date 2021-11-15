@@ -506,7 +506,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     ijmin = index[0].min()
                     ijmax = index[0].max() + 1
                     index_eddy = (index[0] - ijmin, index[1] - iimin)
-                    tmp = OW.isel(time=t, lat=slice(ijmin, ijmax),
+                    tmp = SSH.isel(time=t, lat=slice(ijmin, ijmax),
                                   lon=slice(iimin, iimax)).values.copy()
                     eddy_object_with_mass = np.zeros_like(tmp)
                     eddy_object_with_mass[index_eddy] = tmp[index_eddy]
