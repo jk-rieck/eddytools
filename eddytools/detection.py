@@ -301,11 +301,12 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
     e = 0
     for iregion in list(range(nregions - 1)):
         index = region_index[iregion + 1]
+        region = (regions==iregion+1).astype(int)
         # Loop through all regions detected as eddy at each time step
         eddi[e] = {}
         # Calculate number of pixels comprising detected region, reject if
         # not within [Npix_min, Npix_max]
-        region_Npix = len(index[0])
+        region_Npix = region.sum()
         eddy_area_within_limits = ((region_Npix < det_param['Npix_max'])
                                    * (region_Npix > det_param['Npix_min']))
         min_width = int(np.floor(np.sqrt(region_Npix) / 2))
@@ -314,14 +315,26 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
         Ypix_cen = np.sum(index[1] == X_cen)
         Xpix_cen = np.sum(index[0] == Y_cen)
         eddy_not_too_thin = ((Xpix_cen > min_width) & (Ypix_cen > min_width))
-        if (eddy_area_within_limits & eddy_not_too_thin):
+        # check for local extrema
+        interior = ndimage.binary_erosion(region)
+        exterior = region.astype(bool) ^ interior
+        if interior.sum() == 0:
+            del eddi[e]
+            continue
+        has_internal_ext = (OW.isel(time=t).values[interior].min()
+                            < OW.isel(time=t).values[exterior].min())
+        if (eddy_area_within_limits & eddy_not_too_thin
+            & has_internal_ext):
             # If the region is not too small and not too big, extract
             # eddy information
             eddi[e]['time'] = OW.isel(time=t)['time'].values
             # calc vorticity amplitude
-            eddi[e]['amp'] = np.array(
-                [vort.isel(time=t).values[index].max()
-                 - vort.isel(time=t).values[index].min()])
+            if vort.isel(time=t).values[interior].mean() > 0:
+                amp = (vort.isel(time=t).values[interior].max()
+                       - vort.isel(time=t).values[exterior].mean())
+            elif vort.isel(time=t).values[interior].mean() < 0:
+                amp = (vort.isel(time=t).values[exterior].mean() 
+                       - vort.isel(time=t).values[interior].min())
             # find centre of mass of eddy
             iimin = index[1].min()
             iimax = index[1].max() + 1
@@ -359,8 +372,6 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             eddi[e]['scale'] = np.array([np.sqrt(eddi[e]['area']
                                          / np.pi)])  # [km]
             # get eddy type from Vorticity and store extrema
-            # Note this is written for the Southern Hemisphere
-            # Need to generalize it!
             if eddi[e]['lat'] < 0:
                 if vort.isel(time=t).values[index].mean() < 0:
                     eddi[e]['type'] = 'cyclonic'
@@ -434,6 +445,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
         # not within [Npix_min, Npix_max]
                 region = (regions==iregion+1).astype(int)
                 region_Npix = region.sum()
+                index = get_indeces(region)
                 eddy_area_within_limits = (
                     (region_Npix < det_param['Npix_max'])
                     * (region_Npix > det_param['Npix_min']))
@@ -461,19 +473,48 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                 lat_ext = llat[exterior]
                 d = distance_matrix(lon_ext, lat_ext)
                 is_small_eddy = d.max() < det_param['d_thr']
+        # 6. Ratio of x- to y-extension of eddy has to be > 0.5
+                min_width = int(np.floor(np.sqrt(region_Npix) / 2))
+                X_cen = int(np.floor(np.mean(index[1])))
+                Y_cen = int(np.floor(np.mean(index[0])))
+                Ypix_cen = np.sum(index[1] == X_cen)
+                Xpix_cen = np.sum(index[0] == Y_cen)
+                eddy_not_too_thin = ((Xpix_cen > min_width)
+                                     & (Ypix_cen > min_width))
         # Detected eddies:
                 if (eddy_area_within_limits * has_internal_ext
-                    * is_tall_eddy * is_small_eddy):
+                    * is_tall_eddy * is_small_eddy * eddy_not_too_thin):
                     # find centre of mass of eddy
-                    eddy_object_with_mass = field * region
-                    eddy_object_with_mass[np.isnan(eddy_object_with_mass)] = 0
+                    # find centre of mass of eddy
+                    iimin = index[1].min()
+                    iimax = index[1].max() + 1
+                    ijmin = index[0].min()
+                    ijmax = index[0].max() + 1
+                    index_eddy = (index[0] - ijmin, index[1] - iimin)
+                    tmp = OW.isel(time=t, lat=slice(ijmin, ijmax),
+                                  lon=slice(iimin, iimax)).values.copy()
+                    eddy_object_with_mass = np.zeros_like(tmp)
+                    eddy_object_with_mass[index_eddy] = tmp[index_eddy]
                     j_cen, i_cen = ndimage.center_of_mass(eddy_object_with_mass)
-                    lon_cen = np.interp(i_cen, range(0,len(SSH.lon)), SSH.lon)
-                    lat_cen = np.interp(j_cen, range(0,len(SSH.lat)), SSH.lat)
-                    # store all eddy grid-points
-                    index = get_indeces(region)
-                    eddi[e]['eddy_j'] = index[0]
-                    eddi[e]['eddy_i'] = index[1]
+                    j_cen, i_cen = j_cen + ijmin, i_cen + iimin
+                    lon_eddies = np.interp(i_cen, range(0, len(SSH['lon'])),
+                                           SSH['lon'].values)
+                    lat_eddies = np.interp(j_cen, range(0, len(SSH['lat'])),
+                                           SSH['lat'].values)
+                    if lon_eddies > 180:
+                        eddi[e]['lon'] = np.array([lon_eddies]) - 360.
+                    elif lon_eddies < -180:
+                        eddi[e]['lon'] = np.array([lon_eddies]) + 360.
+                    else:
+                        eddi[e]['lon'] = np.array([lon_eddies])
+                    eddi[e]['lat'] = np.array([lat_eddies])
+                    # store all eddy indices
+                    j_min = (data.lat.where(data.lat == OW.lat.min(), other=0)
+                             ** 2).argmax().values
+                    i_min = (data.lon.where(data.lon == OW.lon.min(), other=0)
+                             ** 2).argmax().values
+                    eddi[e]['eddy_j'] = index[0] + j_min
+                    eddi[e]['eddy_i'] = index[1] + i_min
                     # assign (and calculated) amplitude, area, and scale of
                     # eddies
                     len_deg_lon = ((np.pi/180.) * 6371
