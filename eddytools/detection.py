@@ -328,13 +328,6 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             # If the region is not too small and not too big, extract
             # eddy information
             eddi[e]['time'] = OW.isel(time=t)['time'].values
-            # calc vorticity amplitude
-            if vort.isel(time=t).values[interior].mean() > 0:
-                amp = (vort.isel(time=t).values[interior].max()
-                       - vort.isel(time=t).values[exterior].mean())
-            elif vort.isel(time=t).values[interior].mean() < 0:
-                amp = (vort.isel(time=t).values[exterior].mean() 
-                       - vort.isel(time=t).values[interior].min())
             # find centre of mass of eddy
             iimin = index[1].min()
             iimax = index[1].max() + 1
@@ -358,7 +351,14 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             else:
                 eddi[e]['lon'] = np.array([lon_eddies])
             eddi[e]['lat'] = np.array([lat_eddies])
-
+            # calc vorticity amplitude
+            if vort.isel(time=t).values[interior].mean() > 0:
+                amp = (vort.isel(time=t).values[interior].max()
+                       - vort.isel(time=t).values[exterior].mean())
+            elif vort.isel(time=t).values[interior].mean() < 0:
+                amp = (vort.isel(time=t).values[exterior].mean()
+                       - vort.isel(time=t).values[interior].min())
+            eddi[e]['amp'] = amp
             # store all eddy indices
             j_min = (data.lat.where(data.lat == OW.lat.min(), other=0)
                      ** 2).argmax().values
@@ -509,9 +509,9 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                         eddi[e]['lon'] = np.array([lon_eddies])
                     eddi[e]['lat'] = np.array([lat_eddies])
                     # store all eddy indices
-                    j_min = (data.lat.where(data.lat == OW.lat.min(), other=0)
+                    j_min = (data.lat.where(data.lat == SSH.lat.min(), other=0)
                              ** 2).argmax().values
-                    i_min = (data.lon.where(data.lon == OW.lon.min(), other=0)
+                    i_min = (data.lon.where(data.lon == SSH.lon.min(), other=0)
                              ** 2).argmax().values
                     eddi[e]['eddy_j'] = index[0] + j_min
                     eddi[e]['eddy_i'] = index[1] + i_min
@@ -528,8 +528,6 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
                     eddy_mask[interior.astype(int)==1] = np.nan
                     field = field * eddy_mask
                     eddi[e]['time'] = SSH.isel(time=t).time.values
-                    eddi[e]['lon'] = np.array([lon_cen])
-                    eddi[e]['lat'] = np.array([lat_cen])
                     eddi[e]['amp'] = np.array([amp])
                     eddi[e]['area'] = np.array([area])
                     eddi[e]['scale'] = np.array([scale])
