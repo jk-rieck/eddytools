@@ -654,9 +654,6 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
                     det_eddies[next_eddy]['scale'])
                 tracks[ed]['time'] = np.append(
                     tracks[ed]['time'], det_eddies[next_eddy]['time'])
-                tracks[ed]['vort_extr'] = np.append(
-                    tracks[ed]['vort_extr'],
-                    det_eddies[next_eddy]['vort_extr'])
                 tracks[ed]['eddy_i'][len(tracks[ed]['eddy_i'])] =\
                     det_eddies[next_eddy]['eddy_i']
                 tracks[ed]['eddy_j'][len(tracks[ed]['eddy_j'])] =\
@@ -678,8 +675,6 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
             tmp_track['amp'] = np.array(det_eddies[un]['amp'])
             tmp_track['area'] = np.array(det_eddies[un]['area'])
             tmp_track['scale'] = np.array(det_eddies[un]['scale'])
-            tmp_track['vort_extr'] = np.array(
-                det_eddies[un]['vort_extr'])
             tmp_track['eddy_i'] = {}
             tmp_track['eddy_j'] = {}
             tmp_track['eddy_i'][0] = np.array(det_eddies[un]['eddy_i'])
@@ -756,8 +751,7 @@ def track(tracking_params, in_file=True):
                       'lat': array, # central latitude
                       'scale': array, # diameter of the eddy
                       'area': array, # area of the eddy
-                      'vort_extr': array, # vorticity max/min
-                      'amp': array, # vorticity amplitude
+                      'amp': array, # amplitude
                       'eddy_i': array, # i-indeces of the eddy
                       'eddy_j': array # j-indeces of the eddy
                       }}

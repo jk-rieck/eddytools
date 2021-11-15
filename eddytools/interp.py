@@ -15,6 +15,7 @@ import numpy as np
 import xarray as xr
 import xesmf as xe
 import xgcm
+from scipy import ndimage
 
 
 def horizontal(data, metrics, int_param):
@@ -591,3 +592,83 @@ def update_data(data_int, var_int, var):
             data_int_out = data_int.update({var: (['lat', 'lon'],
                                                   var_int.data)})
     return data_int_out
+
+
+def spatial_filter(data_int, int_param):
+    '''
+    Performs a spatial filter, removing all features with
+    wavelength scales larger than cut_lon in longitude and
+    cut_lat in latitude direction from the input field using a Gaussian
+    filter.
+
+    Parameters
+    ----------
+    data_int : xarray.DataSet
+        xarray dataset containing the 2D variables to filter.
+    int_param : dict
+        Dictionary specifying all the parameters needed for the filtering.
+        The parameters are
+        int_param = {
+            'model': 'MITgcm' # MITgcm or ORCA
+            'grid': 'cartesian' # cartesian or latlon
+            'start_time': 'YYYY-MM-DD', # time range start
+            'end_time': 'YYYY-MM-DD', # time range end
+            'calendar': '360_day', # calendar, must be either 360_day or
+                                   # standard
+            'lon1': -180, # minimum longitude of detection region, either in
+                          # the range (-180, 180) degrees or in m for a
+                          # cartesian grid
+            'lon2': -130, # maximum longitude of detection region, (-180, 180)
+                          # degrees or m
+            'lat1': -55, # minimum latitude of detection region, (-90, 90)
+                         # degrees or m
+            'lat2': -30, # maximum latitude of detection region, (-90, 90)
+                         # degrees or m
+            'res': 1./10., # resolution of the regular grid to interpolate to
+                           # only used when 'grid' == 'latlon'
+            'vars_to_interpolate': ['var1', 'var2', ...],
+            'mask_to_interpolate': ['mask1', 'mask2', ...],
+            'vars_to_filter': ['var1', 'var2', ...], # variables to apply a
+                                                     # spatial high-pass filter
+            'cut_lon': 1, # cutoff wavelength in longitude direction in degree
+                          # only used with spatial_filter()
+            'cut_lat': 1 # cutoff wavelength in latitude direction in degree
+                         # only used with spatial_filter()
+            }
+
+    Returns
+    -------
+    data_int : xarray.DataSet
+        Data filtered.
+
+    '''
+    ## load input parameters
+    cut_lon = int_param['cut_lon']
+    cut_lat = int_param['cut_lat']
+    res = int_param['res']
+    for var in int_param['vars_to_filter']:
+        print('filtering', var)
+        field = data_int[var]
+        field_filt = np.zeros(field.shape)
+        # land mask
+        land = xr.DataArray(np.ones(field.isel(time=0).shape))\
+            .rename({'dim_0': 'lat',
+                     'dim_1': 'lon'}).where(field.isel(time=0)!=0)
+        # see Chelton et al, Prog. Ocean., 2011 for explanation of factor of 1/5
+        sig_lon = (cut_lon / 5.) / res
+        sig_lat = (cut_lat / 5.) / res
+        ## replace land value with area average to avoid sharp edges
+        fieldf = field.where(field!=0)
+        fieldf = fieldf.fillna(fieldf.mean(('lon', 'lat')))
+        ## anomaly of ssh from area average
+        for t in range(0, len(field.time)):
+            field_filt[t, :, :] = (fieldf.isel(time=t) -
+                ndimage.gaussian_filter(fieldf.isel(time=t),
+                                        [sig_lat, sig_lon]))
+        field_filt = xr.DataArray(field_filt).rename({'dim_0':'time',
+                                                      'dim_1':'lat',
+                                                      'dim_2':'lon'})
+        ## mask land values
+        field_filt = field_filt * land
+        data_int = update_data(data_int, field_filt, var + '_filt')
+    return data_int
