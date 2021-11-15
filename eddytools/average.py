@@ -38,7 +38,7 @@ def interp(sampled, v, t, lon_interp, method, anom=True):
                 sampled[v + '_sec'].isel(time=t)
                 .dropna('sec_index', how='all').squeeze()
                 - sampled[v + '_around'].isel(time=t),
-                axis=1, fill_value="extrapolate", kind=method)
+                axis=1, fill_value="extrapolate", kind=method
                 )
         elif len(np.shape(sampled[v + '_sec'].isel(time=t).squeeze())) == 1:
             interp_lon = interp1d(
@@ -47,7 +47,7 @@ def interp(sampled, v, t, lon_interp, method, anom=True):
                 sampled[v + '_sec'].isel(time=t)
                 .dropna('sec_index', how='all').squeeze()
                 - sampled[v + '_around'].isel(time=t),
-                axis=0, fill_value="extrapolate", kind=method)
+                axis=0, fill_value="extrapolate", kind=method
                 )
     else:
         if len(np.shape(sampled[v + '_sec'].isel(time=t).squeeze())) == 2:
@@ -56,7 +56,7 @@ def interp(sampled, v, t, lon_interp, method, anom=True):
                 .dropna('sec_index', how='all'),
                 sampled[v + '_sec'].isel(time=t)
                 .dropna('sec_index', how='all').squeeze(),
-                axis=1, fill_value="extrapolate", kind=method)
+                axis=1, fill_value="extrapolate", kind=method
                 )
         elif len(np.shape(sampled[v + '_sec'].isel(time=t).squeeze())) == 1:
             interp_lon = interp1d(
@@ -64,7 +64,7 @@ def interp(sampled, v, t, lon_interp, method, anom=True):
                 .dropna('sec_index', how='all'),
                 sampled[v + '_sec'].isel(time=t)
                 .dropna('sec_index', how='all').squeeze(), axis=0,
-                fill_value="extrapolate", kind=method)
+                fill_value="extrapolate", kind=method
                 )
     return interp_lon(lon_interp)
 
