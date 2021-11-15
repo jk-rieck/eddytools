@@ -748,6 +748,11 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False):
         or det_param['lat2'] > np.around(data['lat'].max())):
         raise ValueError('`det_param`: min. and/or max. of latitude range'
                          + ' are outside the region contained in the dataset')
+    if (det_param['start_time'] > data['time'][-1]
+        or det_param['end_time'] < data['time'][0]):
+        raise ValueError('`det_param`: there is no overlap of the original time'
+                         + ' axis and the desired time range for the'
+                         + ' detection')
     #
     print('preparing data for eddy detection'
           + ' (masking and region extracting etc.)')

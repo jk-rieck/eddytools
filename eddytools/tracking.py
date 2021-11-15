@@ -759,6 +759,12 @@ def track(tracking_params, in_file=True):
     '''
     # Preparation with `prepare()`
     eddies_time, rossrad, trac_param = prepare(tracking_params)
+    # Check if there are eddies within the time range specified
+    if (tracking_params['start_time'] > eddies_time[-1]
+        or tracking_params['end_time'] < eddies_time[0]):
+        raise ValueError('`tracking_param`: there are no eddies found within'
+                         + ' the range of dates specified in'
+                         + ' `tracking_params`')
     # Initialize `tracks` with all eddies at t=0
     terminated_list = []
     tracks = []
