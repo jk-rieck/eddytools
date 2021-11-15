@@ -10,6 +10,7 @@ needs to have the same structure.
 import numpy as np
 import pandas as pd
 from scipy import ndimage
+import cftime as cft
 try:
     from dask import bag as dask_bag
 except:
@@ -623,6 +624,21 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False):
        or det_param['lat2'] > np.around(data['lat'].max())):
         raise ValueError('`det_param`: min. and/or max. of latitude range'
                          + ' are outside the region contained in the dataset')
+    if det_param['calendar'] == 'standard':
+        start_time = np.datetime64(det_param['start_time'])
+        end_time = np.datetime64(det_param['end_time'])
+    elif det_param['calendar'] == '360_day':
+        start_time = cft.Datetime360Day(int(det_param['start_time'][0:4]),
+                                        int(det_param['start_time'][5:7]),
+                                        int(det_param['start_time'][8:10]))
+        end_time = cft.Datetime360Day(int(det_param['end_time'][0:4]),
+                                      int(det_param['end_time'][5:7]),
+                                      int(det_param['end_time'][8:10]))
+    if (start_time > data['time'][-1]
+        or end_time < data['time'][0]):
+        raise ValueError('`det_param`: there is no overlap of the original time'
+                         + ' axis and the desired time range for the'
+                         + ' detection')
     #
     print('preparing data for eddy detection'
           + ' (masking and region extracting etc.)')
@@ -748,8 +764,18 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False):
         or det_param['lat2'] > np.around(data['lat'].max())):
         raise ValueError('`det_param`: min. and/or max. of latitude range'
                          + ' are outside the region contained in the dataset')
-    if (det_param['start_time'] > data['time'][-1]
-        or det_param['end_time'] < data['time'][0]):
+    if det_param['calendar'] == 'standard':
+        start_time = np.datetime64(det_param['start_time'])
+        end_time = np.datetime64(det_param['end_time'])
+    elif det_param['calendar'] == '360_day':
+        start_time = cft.Datetime360Day(int(det_param['start_time'][0:4]),
+                                        int(det_param['start_time'][5:7]),
+                                        int(det_param['start_time'][8:10]))
+        end_time = cft.Datetime360Day(int(det_param['end_time'][0:4]),
+                                      int(det_param['end_time'][5:7]),
+                                      int(det_param['end_time'][8:10]))
+    if (start_time > data['time'][-1]
+        or end_time < data['time'][0]):
         raise ValueError('`det_param`: there is no overlap of the original time'
                          + ' axis and the desired time range for the'
                          + ' detection')
