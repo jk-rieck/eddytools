@@ -140,9 +140,9 @@ def prepare(sampled, vars, lon_int=101, method='nearest'):
                 e = np.shape(aves[v + '_anom'][month])[0] - 1
                 for m in np.arange(0, len(sampled[ed]['time'])):
                     aves[v + '_anom'][month][e, m, :, :] =\
-                        interp(sampled[ed], v, m, method=method anom=True)
+                        interp(sampled[ed], v, m, method=method, anom=True)
                     aves[v][month][e, m, :, :] =\
-                        interp(sampled[ed], v, m, method=method anom=False)
+                        interp(sampled[ed], v, m, method=method, anom=False)
                     aves[v + '_around'][month][e, m, :] =\
                         sampled[ed][v + '_around'][m]
             elif len(np.shape(sampled[ed][v + '_sec'][0].squeeze())) == 1:
