@@ -29,9 +29,9 @@ pip install -e .
    `xesmf`, `xgcm`, `xorca`, `operator` and `pip` installed.
 
 2. Install from the repository using
-  ```shell
+  ~~~bash
   pip install git+https://git.geomar.de/jrieck-archive/eddytools.git@v0.1
-  ```
+  ~~~
 
 ## Usage
 
