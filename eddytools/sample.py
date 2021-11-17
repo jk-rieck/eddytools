@@ -349,7 +349,7 @@ def write_to_netcdf(file_name, sample, sample_param, data):
         for t in np.arange(0, len(sample['time'])):
             len_p = len(sample['eddy_i'][t])
             len_s_zon = len(sample[var + '_sec_zon_lon'][t])
-            len_s_mer = len(sample[var + '_sec_mer_lon'][t])
+            len_s_mer = len(sample[var + '_sec_mer_lat'][t])
             if len(data[var].shape) == 3:
                 dummy_around[t] = sample[var + '_around'][t]
                 dummy_var[t, 0:len_p, 0:len_p] = sample[var][t]
