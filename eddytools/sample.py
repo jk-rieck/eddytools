@@ -368,8 +368,8 @@ def write_to_netcdf(file_name, sample, sample_param, data):
                 sample[var + '_sec_zon_norm_lon'][t]
             dummy_sec_mer_lon[t] = sample[var + '_sec_mer_lon'][t]
             dummy_sec_mer_lat[t, 0:len_s_mer] = sample[var + '_sec_mer_lat'][t]
-            dummy_sec_mer_norm_lon[t, 0:len_s_mer] =\
-                sample[var + '_sec_mer_norm_lon'][t]
+            dummy_sec_mer_norm_lat[t, 0:len_s_mer] =\
+                sample[var + '_sec_mer_norm_lat'][t]
         if len(data[var].shape) == 3:
             out_nc = out_nc.update({var + '_around':
                                    (['time'],
