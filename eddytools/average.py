@@ -36,7 +36,8 @@ def nan_mult_zero(arg1, arg2):
     result[where_one_zero] = 0
     return result
 
-def interp(sampled, v, t, int_vec, method, anom=True, sec):
+def interp(sampled, v, t, int_vec=101, method='nearest', sec='zonal',
+           anom=True):
     '''Interpolate the normalized longitudes onto a common vector.
 
     Parameters
