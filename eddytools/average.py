@@ -32,7 +32,7 @@ def nan_mult_zero(arg1, arg2):
     where_both_nan = (np.isnan(arg1) & np.isnan(arg2))
     where_one_zero = ((arg1 == 0) | (arg2 == 0))
     result = arg1 * arg2
-    result[where_nan] = np.nan
+    result[where_both_nan] = np.nan
     result[where_one_zero] = 0
     return result
 
