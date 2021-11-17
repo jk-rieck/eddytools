@@ -101,7 +101,7 @@ def interp(sampled, v, t, int_vec=101, method='nearest', sec='zonal',
                 .dropna(secc + '_index', how='all').squeeze(), axis=0,
                 fill_value="extrapolate", kind=method
                 )
-    return interp_lon(int_vec)
+    return interpol(int_vec)
 
 
 def prepare(sampled, vars, interp_vec=101, interp_method='nearest',
