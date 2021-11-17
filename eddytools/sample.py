@@ -294,7 +294,7 @@ def write_to_netcdf(file_name, sample, sample_param, data):
     max_sec_zon = np.max([len(sample[dummy_var + '_sec_zon_lon'][t])
                           for t in np.arange(0, len(sample[dummy_var
                                                            + '_sec_zon_lon']))])
-    max_sec_lat = np.max([len(sample[dummy_var + '_sec_mer_lat'][t])
+    max_sec_mer = np.max([len(sample[dummy_var + '_sec_mer_lat'][t])
                           for t in np.arange(0, len(sample[dummy_var
                                                            + '_sec_mer_lat']))])
     out_nc = xr.Dataset({'time': ('time', sample['time']),
