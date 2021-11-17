@@ -108,9 +108,19 @@ def prepare(sampled, vars, lon_int=101, method='nearest'):
         aves[v + '_around'] = {}
         for mon in ['01', '02', '03', '04', '05', '06',
                     '07', '08', '09', '10', '11', '12']:
-            aves[v + '_anom'][mon] = {}
-            aves[v][mon] = {}
-            aves[v + '_around'][mon] = {}
+            if len(np.shape(sampled[1][v + '_sec'][0].squeeze())) == 2:
+                aves[v + '_anom'][mon] = np.zeros((1, max_time, len_z,
+                                                   len(lon_interp))) + np.nan
+                aves[v][mon] = np.zeros((1, max_time,
+                                         len_z, len(lon_interp))) + np.nan
+                aves[v + '_around'][mon] = np.zeros((1, max_time,
+                                                     len_z)) + np.nan
+            elif len(np.shape(sampled[1][v + '_sec'][0].squeeze())) == 1:
+                aves[v + '_anom'][mon] = np.zeros((1, max_time,
+                                                   len(lon_interp))) + np.nan
+                aves[v][mon] = np.zeros((1, max_time,
+                                         len(lon_interp))) + np.nan
+                aves[v + '_around'][mon] = np.zeros((1, max_time)) + np.nan
         for ed in np.arange(1, len(sampled) + 1):
             month = str(sampled[ed]['time'][0].values)[5:7]
             if len(np.shape(sampled[ed][v + '_sec'][0].squeeze())) == 2:
