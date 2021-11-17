@@ -60,44 +60,44 @@ def interp(sampled, v, t, int_vec=101, method='nearest', sec='zonal',
         vector.
     '''
     if sec == 'zonal':
-        secc = '_sec_zon'
+        secc = 'sec_zon'
         norm = secc + '_norm_lon'
     elif sec == 'meridional':
-        secc = '_sec_mer'
+        secc = 'sec_mer'
         norm = secc + '_norm_lat'
     if anom:
-        if len(np.shape(sampled[v + secc].isel(time=t).squeeze())) == 2:
+        if len(np.shape(sampled[v + '_' + secc].isel(time=t).squeeze())) == 2:
             interpol = interp1d(
-                sampled[v + norm].isel(time=t)
+                sampled[v + '_' + norm].isel(time=t)
                 .dropna(secc + '_index', how='all'),
-                sampled[v + secc].isel(time=t)
+                sampled[v + '_' + secc].isel(time=t)
                 .dropna(secc + '_index', how='all').squeeze()
                 - sampled[v + '_around'].isel(time=t),
                 axis=1, fill_value="extrapolate", kind=method
                 )
-        elif len(np.shape(sampled[v + secc].isel(time=t).squeeze())) == 1:
+        elif len(np.shape(sampled[v + '_' + secc].isel(time=t).squeeze())) == 1:
             interpol = interp1d(
-                sampled[v + norm].isel(time=t)
+                sampled[v + '_' + norm].isel(time=t)
                 .dropna(secc + '_index', how='all'),
-                sampled[v + secc].isel(time=t)
+                sampled[v + '_' + secc].isel(time=t)
                 .dropna(secc + '_index', how='all').squeeze()
                 - sampled[v + '_around'].isel(time=t),
                 axis=0, fill_value="extrapolate", kind=method
                 )
     else:
-        if len(np.shape(sampled[v + secc].isel(time=t).squeeze())) == 2:
+        if len(np.shape(sampled[v + '_' + secc].isel(time=t).squeeze())) == 2:
             interpol = interp1d(
-                sampled[v + norm].isel(time=t)
+                sampled[v + '_' + norm].isel(time=t)
                 .dropna(secc + '_index', how='all'),
-                sampled[v + secc].isel(time=t)
+                sampled[v + '_' + secc].isel(time=t)
                 .dropna(secc + '_index', how='all').squeeze(),
                 axis=1, fill_value="extrapolate", kind=method
                 )
-        elif len(np.shape(sampled[v + secc].isel(time=t).squeeze())) == 1:
+        elif len(np.shape(sampled[v + '_' + secc].isel(time=t).squeeze())) == 1:
             interpol = interp1d(
-                sampled[v + norm].isel(time=t)
+                sampled[v + '_' + norm].isel(time=t)
                 .dropna(secc + '_index', how='all'),
-                sampled[v + secc].isel(time=t)
+                sampled[v + '_' + secc].isel(time=t)
                 .dropna(secc + '_index', how='all').squeeze(), axis=0,
                 fill_value="extrapolate", kind=method
                 )
