@@ -75,11 +75,15 @@ def add_fields(sampled, interpolated, sample_param, var, lon1, lat1):
     sampled[var] = {}
     sampled[var + '_lon'] = {}
     sampled[var + '_lat'] = {}
-    sampled[var + '_sec'] = {}
-    sampled[var + '_sec_lon'] = {}
-    sampled[var + '_sec_lat'] = {}
+    sampled[var + '_sec_zon'] = {}
+    sampled[var + '_sec_mer'] = {}
+    sampled[var + '_sec_zon_lon'] = {}
+    sampled[var + '_sec_mer_lon'] = {}
+    sampled[var + '_sec_zon_lat'] = {}
+    sampled[var + '_sec_mer_lat'] = {}
     sampled[var + '_around'] = {}
-    sampled[var + '_sec_norm_lon'] = {}
+    sampled[var + '_sec_zon_norm_lon'] = {}
+    sampled[var + '_sec_mer_norm_lat'] = {}
     try:
         length = len(sampled['time'])
     except:
