@@ -345,7 +345,7 @@ def write_to_netcdf(file_name, sample, sample_param, data):
         dummy_sec_zon_norm_lon = np.zeros((len_t, max_sec_zon)) + np.nan
         dummy_sec_mer_lon = np.zeros((len_t)) + np.nan
         dummy_sec_mer_lat = np.zeros((len_t, max_sec_mer)) + np.nan
-        dummy_sec_mer_norm_lon = np.zeros((len_t, max_sec_mer)) + np.nan
+        dummy_sec_mer_norm_lat = np.zeros((len_t, max_sec_mer)) + np.nan
         for t in np.arange(0, len(sample['time'])):
             len_p = len(sample['eddy_i'][t])
             len_s_zon = len(sample[var + '_sec_zon_lon'][t])
