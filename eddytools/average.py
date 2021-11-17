@@ -7,6 +7,34 @@ Collection of functions to average the sampled eddies from `sample.py`.
 import numpy as np
 from scipy.interpolate import interp1d
 
+def nan_mult_zero(arg1, arg2):
+    ''' Multiply arg1 and arg2 pointwise.
+    If both arg1 and arg2 are not nan, multiply normally.
+    If one of (arg1, arg2) is zero, the result will be zero even when the
+    other value of (arg1, arg2) is nan.
+    If one of (arg1, arg2) is nan and the other is non-zero the result will
+    be nan.
+    If both arg1 and arg2 are nan, the result will be nan.
+
+    Parameters
+    ----------
+    arg1 : array
+        Input array of any shape.
+    arg2 : array
+        Input array, must be in the same shape as arg1 or broadcastable to
+        shape of arg1.
+
+    Returns
+    -------
+    result : array
+        Output array with the same shape as arg1 and treated as described above.
+    '''
+    where_both_nan = (np.isnan(arg1) & np.isnan(arg2))
+    where_one_zero = ((arg1 == 0) | (arg2 == 0))
+    result = arg1 * arg2
+    result[where_both_nan] = np.nan
+    result[where_one_zero] = 0
+    return result
 
 def interp(sampled, v, t, lon_interp, method, anom=True):
     '''Interpolate the normalized longitudes onto a common vector.
@@ -183,6 +211,24 @@ def prepare(sampled, vars, lon_int=101, method='nearest'):
                                method=method, anom=False)
                     aves[v + '_around'][month][e, m] =\
                         sampled[ed][v + '_around'][m]
+        for mon in ['01', '02', '03', '04', '05', '06',
+                    '07', '08', '09', '10', '11', '12']:
+            try:
+                test_month = aves[v][mon]
+            except:
+                if len(np.shape(sampled[1][v + '_sec'][0].squeeze())) == 2:
+                    aves[v + '_anom'][mon] = np.zeros((1, max_time, len_z,
+                                                 len(lon_interp))) + np.nan
+                    aves[v][mon] = np.zeros((1, max_time,
+                                             len_z, len(lon_interp))) + np.nan
+                    aves[v + '_around'][mon] = np.zeros((1, max_time,
+                                                         len_z)) + np.nan
+                elif len(np.shape(sampled[1][v + '_sec'][0].squeeze())) == 1:
+                    aves[v + '_anom'][mon] = np.zeros((1, max_time,
+                                                 len(lon_interp))) + np.nan
+                    aves[v][mon] = np.zeros((1, max_time,
+                                             len(lon_interp))) + np.nan
+                    aves[v + '_around'][mon] = np.zeros((1, max_time)) + np.nan
     return aves
 
 
@@ -303,62 +349,62 @@ def seasonal(eddies, variables):
                                  )))
                     else:
                         out[meth][quant][seas][var + '_anom'] =\
-                            (((function(extract(
+                            ((nan_mult_zero(function(extract(
                                 eddies[var + '_anom'][one], meth
-                                ))
-                               * c_function(extract(
+                                )),
+                                c_function(extract(
                                    eddies[var + '_anom'][one], meth
                                    )))
-                              + (function(extract(
+                              + nan_mult_zero(function(extract(
                                   eddies[var + '_anom'][two], meth
-                                  ))
-                                 * c_function(extract(
+                                  )),
+                                  c_function(extract(
                                      eddies[var + '_anom'][two], meth
                                      )))
-                              + (function(extract(
+                              + nan_mult_zero(function(extract(
                                   eddies[var + '_anom'][thr], meth
-                                  ))
-                                 * c_function(extract(
+                                  )),
+                                  c_function(extract(
                                      eddies[var + '_anom'][thr], meth
                                      ))))
                              / out[meth]['count'][seas][var + '_anom'])
                         out[meth][quant][seas][var] =\
-                            (((function(extract(
+                            ((nan_mult_zero(function(extract(
                                 eddies[var][one], meth
-                                ))
-                               * c_function(extract(
+                                )),
+                                c_function(extract(
                                    eddies[var][one], meth
                                    )))
-                              + (function(extract(
+                              + nan_mult_zero(function(extract(
                                   eddies[var][two], meth
-                                  ))
-                                 * c_function(extract(
+                                  )),
+                                  c_function(extract(
                                      eddies[var][two], meth
                                      )))
-                              + (function(extract(
+                              + nan_mult_zero(function(extract(
                                   eddies[var][thr], meth
-                                  ))
-                                 * c_function(extract(
+                                  )),
+                                  c_function(extract(
                                      eddies[var][thr], meth
                                      ))))
                              / out[meth]['count'][seas][var])
                         out[meth][quant][seas][var + '_around'] =\
-                            (((function(extract_around(
+                            ((nan_mult_zero(function(extract_around(
                                 eddies[var + '_around'][one]
-                                ))
-                               * c_function(extract_around(
+                                )),
+                                c_function(extract_around(
                                    eddies[var + '_around'][one]
                                    )))
-                              + (function(extract_around(
+                              + nan_mult_zero(function(extract_around(
                                   eddies[var + '_around'][two]
-                                  ))
-                                 * c_function(extract_around(
+                                  )),
+                                  c_function(extract_around(
                                      eddies[var + '_around'][two]
                                      )))
-                              + (function(extract_around(
+                              + nan_mult_zero(function(extract_around(
                                    eddies[var + '_around'][thr]
-                                   ))
-                                  * c_function(extract_around(
+                                   )),
+                                   c_function(extract_around(
                                       eddies[var + '_around'][thr]
                                       ))))
                              / out[meth]['count'][seas][var + '_around'])
@@ -474,14 +520,16 @@ def total(eddies, variables):
                         m_eddies[meth][quant]['01'][var + '_around']
                 else:
                     out[meth][quant][var + '_anom'] =\
-                        (m_eddies[meth][quant]['01'][var + '_anom']
-                         * m_eddies[meth]['count']['01'][var + '_anom'])
+                        nan_mult_zero(m_eddies[meth][quant]['01'][var
+                        + '_anom'],
+                        m_eddies[meth]['count']['01'][var + '_anom'])
                     out[meth][quant][var] =\
-                        (m_eddies[meth][quant]['01'][var]
-                         * m_eddies[meth]['count']['01'][var])
+                        nan_mult_zero(m_eddies[meth][quant]['01'][var],
+                        m_eddies[meth]['count']['01'][var])
                     out[meth][quant][var + '_around'] =\
-                        (m_eddies[meth][quant]['01'][var + '_around']
-                         * m_eddies[meth]['count']['01'][var + '_around'])
+                        nan_mult_zero(m_eddies[meth][quant]['01'][var
+                        + '_around'], m_eddies[meth]['count']['01'][var
+                        + '_around'])
                 for m in months:
                     if quant == 'count':
                         out[meth][quant][var + '_anom'] =\
@@ -496,16 +544,18 @@ def total(eddies, variables):
                     else:
                         out[meth][quant][var + '_anom'] =\
                             (out[meth][quant][var + '_anom']
-                             + (m_eddies[meth][quant][m][var + '_anom']
-                                * m_eddies[meth]['count'][m][var + '_anom']))
+                             + nan_mult_zero(m_eddies[meth][quant][m][var
+                             + '_anom'], m_eddies[meth]['count'][m][var
+                             + '_anom']))
                         out[meth][quant][var] =\
                             (out[meth][quant][var]
-                             + (m_eddies[meth][quant][m][var]
-                                * m_eddies[meth]['count'][m][var]))
+                             + nan_mult_zero(m_eddies[meth][quant][m][var],
+                             m_eddies[meth]['count'][m][var]))
                         out[meth][quant][var + '_around'] =\
                             (out[meth][quant][var + '_around']
-                             + (m_eddies[meth][quant][m][var + '_around']
-                                * m_eddies[meth]['count'][m][var + '_around']))
+                             + nan_mult_zero(m_eddies[meth][quant][m][var
+                             + '_around'], m_eddies[meth]['count'][m][var
+                             + '_around']))
                 if (quant == 'mean') or (quant == 'std'):
                     out[meth][quant][var + '_anom'] =\
                         (out[meth][quant][var + '_anom']

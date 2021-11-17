@@ -829,27 +829,27 @@ def track(tracking_params, in_file=True):
             print('tracking at time step ', str(tt + 1), ' of ',
                   len(eddies_time))
         if in_file:
-            try:
-                nextdate = str(eddies_time[tt])[0:10]
-                os.path.isfile(trac_param['data_path']
-                               + trac_param['file_root'] + '_'
-                               + str(nextdate) + '_'
-                               + trac_param['file_spec']
-                               + '.pickle')
-            except:
+            nextdate = str(eddies_time[tt])[0:10]
+            file_found = os.path.isfile(trac_param['data_path']
+                             + trac_param['file_root'] + '_'
+                             + str(nextdate) + '_'
+                             + trac_param['file_spec']
+                             + '.pickle')
+            if file_found:
+                terminate_all = False
+            else:
                 terminate_all = True
-                continue
         else:
             try:
                 trac_param['dict'][tt][0]['time']
             except:
                 terminate_all = True
-                continue
         if terminate_all:
             for ed in range(len(tracks)):
                 tracks[ed]['terminated'] = True
                 terminated_list.append(ed)
             terminated_list = list(set(terminated_list))
+            continue
         # Loop through all time steps in `det_eddies`
         if in_file:
             datestring = str(eddies_time[tt])[0:10]
