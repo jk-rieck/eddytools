@@ -838,18 +838,17 @@ def track(tracking_params, in_file=True):
                                + '.pickle')
             except:
                 terminate_all = True
-                continue
         else:
             try:
                 trac_param['dict'][tt][0]['time']
             except:
                 terminate_all = True
-                continue
         if terminate_all:
             for ed in range(len(tracks)):
                 tracks[ed]['terminated'] = True
                 terminated_list.append(ed)
             terminated_list = list(set(terminated_list))
+            continue
         # Loop through all time steps in `det_eddies`
         if in_file:
             datestring = str(eddies_time[tt])[0:10]
