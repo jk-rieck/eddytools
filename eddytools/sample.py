@@ -108,30 +108,48 @@ def add_fields(sampled, interpolated, sample_param, var, lon1, lat1):
                                                 lat_index, lon_index]
         sampled[var + '_lon'][t] = sampled[var][t]['lon'].values
         sampled[var + '_lat'][t] = sampled[var][t]['lat'].values
-        # add the values of `var` along a zonal section through the middle of
+        # add the values of `var` along a zonal section (`sec_zon`) and a
+        # meridional section (`sec_mer`) through the middle of
         # the eddy, together with the coordinates
         if len(interpolated[var].shape) == 3:
-            sampled[var + '_sec'][t] = interpolated[var][
+            sampled[var + '_sec_zon'][t] = interpolated[var][
                 time_index, int(lat_index.mean().values),
                 int(lon_index.min().values):int(lon_index.max().values)]
+            sampled[var + '_sec_mer'][t] = interpolated[var][
+                time_index,
+                int(lat_index.min().values):int(lat_index.max().values),
+                int(lon_index.mean().values)]
         else:
-            sampled[var + '_sec'][t] = interpolated[var][
+            sampled[var + '_sec_zon'][t] = interpolated[var][
                 time_index, :, int(lat_index.mean().values),
                 int(lon_index.min().values):int(lon_index.max().values)]
-        sampled[var + '_sec_lon'][t] =\
-            sampled[var + '_sec'][t]['lon'].values
-        sampled[var + '_sec_lat'][t] =\
-            sampled[var + '_sec'][t]['lat'].values
-        # normalize longitude to the range (-0.5, 0.5) for easier comparison
-        # of different eddies
-        lon_for_diff = sampled[var + '_sec'][t]['lon'].values
+            sampled[var + '_sec_mer'][t] = interpolated[var][
+                time_index, :,
+                int(lat_index.min().values):int(lat_index.max().values),
+                int(lon_index.mean().values)]
+        sampled[var + '_sec_zon_lon'][t] =\
+            sampled[var + '_sec_zon'][t]['lon'].values
+        sampled[var + '_sec_zon_lat'][t] =\
+            sampled[var + '_sec_zon'][t]['lat'].values
+        sampled[var + '_sec_mer_lon'][t] =\
+            sampled[var + '_sec_mer'][t]['lon'].values
+        sampled[var + '_sec_mer_lat'][t] =\
+            sampled[var + '_sec_mer'][t]['lat'].values
+        # normalize longitude (for sec_zon) or latitude (for sec_mer) to the
+        # range (-0.5, 0.5) for easier comparison of different eddies
+        lon_for_diff = sampled[var + '_sec_zon'][t]['lon'].values
         if sample_param['grid'] == 'latlon':
             lon_for_diff[lon_for_diff < 0] = (lon_for_diff[lon_for_diff < 0]
                                               + 360)
         diff_lon = lon_for_diff - np.nanmean(lon_for_diff)
         norm_lon = diff_lon / (diff_lon[-1] - diff_lon[0])
-        sampled[var + '_sec_norm_lon'][t] = norm_lon
-        sampled[var + '_sec'][t] = sampled[var + '_sec'][t].values
+        sampled[var + '_sec_zon_norm_lon'][t] = norm_lon
+        sampled[var + '_sec_zon'][t] = sampled[var + '_sec_zon'][t].values
+        lat_for_diff = sampled[var + '_sec_mer'][t]['lat'].values
+        diff_lat = lat_for_diff - np.nanmean(lat_for_diff)
+        norm_lat = diff_lat / (diff_lat[-1] - diff_lat[0])
+        sampled[var + '_sec_mer_norm_lat'][t] = norm_lat
+        sampled[var + '_sec_mer'][t] = sampled[var + '_sec_mer'][t].values
         # add a depth profile of the values of `var` in the surroundings of
         # the eddy to calculate anomalies
         sampled[var + '_around'][t] =\
@@ -269,14 +287,21 @@ def write_to_netcdf(file_name, sample, sample_param, data):
     dummy_var = sample_param['sample_vars'][0]
     max_points = np.max([len(sample['eddy_i'][t])
                          for t in np.arange(0, len(sample['eddy_i']))])
-    max_sec = np.max([len(sample[dummy_var + '_sec_lon'][t])
-                      for t in np.arange(0, len(sample[dummy_var
-                                                       + '_sec_lon']))])
+    max_sec_zon = np.max([len(sample[dummy_var + '_sec_zon_lon'][t])
+                          for t in np.arange(0, len(sample[dummy_var
+                                                           + '_sec_zon_lon']))])
+    max_sec_lat = np.max([len(sample[dummy_var + '_sec_mer_lat'][t])
+                          for t in np.arange(0, len(sample[dummy_var
+                                                           + '_sec_mer_lat']))])
     out_nc = xr.Dataset({'time': ('time', sample['time']),
                          'points': ('points', np.arange(0, max_points)),
                          'depth': ('depth', data['z'].data),
-                         'sec_index': ('sec_index', np.arange(0, max_sec))})
-    out_nc = out_nc.set_coords(['time', 'points', 'depth', 'sec_index'])
+                         'sec_zon_index': ('sec_zon_index',
+                                           np.arange(0, max_sec_zon)),
+                         'sec_mer_index': ('sec_mer_index',
+                                           np.arange(0, max_sec_mer))})
+    out_nc = out_nc.set_coords(['time', 'points', 'depth',
+                                'sec_zon_index', 'sec_mer_index'])
 
     out_nc = out_nc.update({'type': (sample['type'])})
     out_nc = out_nc.update({'exist_at_start': (sample['exist_at_start'])})
@@ -301,33 +326,46 @@ def write_to_netcdf(file_name, sample, sample_param, data):
             dummy_around = np.zeros((len_t)) + np.nan
             dummy_var = np.zeros((len_t,
                                   max_points, max_points)) + np.nan
-            dummy_sec = np.zeros((len_t, max_sec)) + np.nan
+            dummy_sec_zon = np.zeros((len_t, max_sec_zon)) + np.nan
+            dummy_sec_mer = np.zeros((len_t, max_sec_mer)) + np.nan
         else:
             dummy_around = np.zeros((len_t, len_z)) + np.nan
             dummy_var = np.zeros((len_t, len_z,
                                   max_points, max_points)) + np.nan
-            dummy_sec = np.zeros((len_t, len_z, max_sec)) + np.nan
+            dummy_sec_zon = np.zeros((len_t, len_z, max_sec_zon)) + np.nan
+            dummy_sec_mer = np.zeros((len_t, len_z, max_sec_mer)) + np.nan
         dummy_lon = np.zeros((len_t, max_points)) + np.nan
         dummy_lat = np.zeros((len_t, max_points)) + np.nan
-        dummy_sec_lon = np.zeros((len_t, max_sec)) + np.nan
-        dummy_sec_lat = np.zeros((len_t)) + np.nan
-        dummy_sec_norm_lon = np.zeros((len_t, max_sec)) + np.nan
+        dummy_sec_zon_lon = np.zeros((len_t, max_sec_zon)) + np.nan
+        dummy_sec_zon_lat = np.zeros((len_t)) + np.nan
+        dummy_sec_zon_norm_lon = np.zeros((len_t, max_sec_zon)) + np.nan
+        dummy_sec_mer_lon = np.zeros((len_t)) + np.nan
+        dummy_sec_mer_lat = np.zeros((len_t, max_sec_mer)) + np.nan
+        dummy_sec_mer_norm_lon = np.zeros((len_t, max_sec_mer)) + np.nan
         for t in np.arange(0, len(sample['time'])):
             len_p = len(sample['eddy_i'][t])
-            len_s = len(sample[var + '_sec_lon'][t])
+            len_s_zon = len(sample[var + '_sec_zon_lon'][t])
+            len_s_mer = len(sample[var + '_sec_mer_lon'][t])
             if len(data[var].shape) == 3:
                 dummy_around[t] = sample[var + '_around'][t]
                 dummy_var[t, 0:len_p, 0:len_p] = sample[var][t]
-                dummy_sec[t, 0:len_s] = sample[var + '_sec'][t]
+                dummy_sec_zon[t, 0:len_s_zon] = sample[var + '_sec_zon'][t]
+                dummy_sec_mer[t, 0:len_s_mer] = sample[var + '_sec_mer'][t]
             else:
                 dummy_around[t, :] = sample[var + '_around'][t]
                 dummy_var[t, :, 0:len_p, 0:len_p] = sample[var][t]
-                dummy_sec[t, :, 0:len_s] = sample[var + '_sec'][t]
+                dummy_sec_zon[t, :, 0:len_s_zon] = sample[var + '_sec_zon'][t]
+                dummy_sec_mer[t, :, 0:len_s_mer] = sample[var + '_sec_mer'][t]
             dummy_lon[t, 0:len_p] = sample[var + '_lon'][t]
             dummy_lat[t, 0:len_p] = sample[var + '_lat'][t]
-            dummy_sec_lon[t, 0:len_s] = sample[var + '_sec_lon'][t]
-            dummy_sec_lat[t] = sample[var + '_sec_lat'][t]
-            dummy_sec_norm_lon[t, 0:len_s] = sample[var + '_sec_norm_lon'][t]
+            dummy_sec_zon_lon[t, 0:len_s_zon] = sample[var + '_sec_zon_lon'][t]
+            dummy_sec_zon_lat[t] = sample[var + '_sec_zon_lat'][t]
+            dummy_sec_zon_norm_lon[t, 0:len_s_zon] =\
+                sample[var + '_sec_zon_norm_lon'][t]
+            dummy_sec_mer_lon[t] = sample[var + '_sec_mer_lon'][t]
+            dummy_sec_mer_lat[t, 0:len_s_mer] = sample[var + '_sec_mer_lat'][t]
+            dummy_sec_mer_norm_lon[t, 0:len_s_mer] =\
+                sample[var + '_sec_mer_norm_lon'][t]
         if len(data[var].shape) == 3:
             out_nc = out_nc.update({var + '_around':
                                    (['time'],
@@ -335,9 +373,12 @@ def write_to_netcdf(file_name, sample, sample_param, data):
             out_nc = out_nc.update({var:
                                     (['time', 'points', 'points'],
                                      dummy_var.astype(np.float32))})
-            out_nc = out_nc.update({var + '_sec':
-                                    (['time', 'sec_index'],
-                                     dummy_sec.astype(np.float32))})
+            out_nc = out_nc.update({var + '_sec_zon':
+                                    (['time', 'sec_zon_index'],
+                                     dummy_sec_zon.astype(np.float32))})
+            out_nc = out_nc.update({var + '_sec_mer':
+                                    (['time', 'sec_mer_index'],
+                                     dummy_sec_mer.astype(np.float32))})
         else:
             out_nc = out_nc.update({var + '_around':
                                     (['time', 'depth'],
@@ -345,24 +386,36 @@ def write_to_netcdf(file_name, sample, sample_param, data):
             out_nc = out_nc.update({var:
                                     (['time', 'depth', 'points', 'points'],
                                      dummy_var.astype(np.float32))})
-            out_nc = out_nc.update({var + '_sec':
-                                    (['time', 'depth', 'sec_index'],
-                                     dummy_sec.astype(np.float32))})
+            out_nc = out_nc.update({var + '_sec_zon':
+                                    (['time', 'depth', 'sec_zon_index'],
+                                     dummy_sec_zon.astype(np.float32))})
+            out_nc = out_nc.update({var + '_sec_mer':
+                                    (['time', 'depth', 'sec_mer_index'],
+                                     dummy_sec_mer.astype(np.float32))})
         out_nc = out_nc.update({var + '_lon':
                                 (['time', 'points'],
                                  dummy_lon.astype(np.float32))})
         out_nc = out_nc.update({var + '_lat':
                                 (['time', 'points'],
                                  dummy_lat.astype(np.float32))})
-        out_nc = out_nc.update({var + '_sec_lon':
-                                (['time', 'sec_index'],
-                                 dummy_sec_lon.astype(np.float32))})
-        out_nc = out_nc.update({var + '_sec_lat':
+        out_nc = out_nc.update({var + '_sec_zon_lon':
+                                (['time', 'sec_zon_index'],
+                                 dummy_sec_zon_lon.astype(np.float32))})
+        out_nc = out_nc.update({var + '_sec_mer_lon':
                                 (['time'],
-                                 dummy_sec_lat.astype(np.float32))})
-        out_nc = out_nc.update({var + '_sec_norm_lon':
-                                (['time', 'sec_index'],
-                                 dummy_sec_norm_lon.astype(np.float32))})
+                                 dummy_sec_mer_lon.astype(np.float32))})
+        out_nc = out_nc.update({var + '_sec_zon_lat':
+                                (['time'],
+                                 dummy_sec_zon_lat.astype(np.float32))})
+        out_nc = out_nc.update({var + '_sec_mer_lat':
+                                (['time', 'sec_mer_index'],
+                                 dummy_sec_mer_lat.astype(np.float32))})
+        out_nc = out_nc.update({var + '_sec_zon_norm_lon':
+                                (['time', 'sec_zon_index'],
+                                 dummy_sec_zon_norm_lon.astype(np.float32))})
+        out_nc = out_nc.update({var + '_sec_mer_norm_lat':
+                                (['time', 'sec_mer_index'],
+                                 dummy_sec_mer_norm_lat.astype(np.float32))})
 
     comp = dict(zlib=True, complevel=1)
     encoding = {var: comp for var in out_nc.data_vars}
