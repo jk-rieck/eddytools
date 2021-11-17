@@ -59,10 +59,10 @@ def interp(sampled, v, t, int_vec=101, method='nearest', sec='zonal',
         Section of `v` interpolated onto common normalized longitude
         vector.
     '''
-    if section == 'zonal':
+    if sec == 'zonal':
         secc = '_sec_zon'
         norm = secc + '_norm_lon'
-    elif section == 'meridional':
+    elif sec == 'meridional':
         secc = '_sec_mer'
         norm = secc + '_norm_lat'
     if anom:
