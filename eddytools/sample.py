@@ -44,6 +44,9 @@ def add_fields(sampled, interpolated, sample_param, var, lon1, lat1):
             'type': 'anticyclonic', # type of eddy
             'lifetime': 20, # length of the eddy's track in days
             'size': 20, # eddy size (diameter in km)
+            'd_surr' : 1 # Distance from eddy edge to take into account for the
+                         # computation of the eddy's average surroundings. Unit
+                         # is eddy radii.
             'range': False, # sample eddy within a range of `var_range`
             'ds_range': data_int.isel(z=9), # dataset of `var_range`
             'var_range': ['votemper'], # variable to base the range on
@@ -157,12 +160,13 @@ def add_fields(sampled, interpolated, sample_param, var, lon1, lat1):
         # add a depth profile of the values of `var` in the surroundings of
         # the eddy to calculate anomalies
         sampled[var + '_around'][t] =\
-            average_surroundings(indeces, interpolated[var], t_index)
+            average_surroundings(indeces, interpolated[var], t_index,
+                                 sample_param['d_surr'])
         sampled[var][t] = sampled[var][t].values
     return sampled
 
 
-def average_surroundings(indeces, interpolated, t_index):
+def average_surroundings(indeces, interpolated, t_index, d_surr=1):
     """Average surroundings of an eddy to calculate anomalies
 
     Parameters
@@ -173,6 +177,9 @@ def average_surroundings(indeces, interpolated, t_index):
         xarray DataArray of the variable to extract.
     t_index : int
         Index for the time dimension of `interpolated`.
+    d_surr : float
+        Distance from eddy edge to take into account for the computation of
+        the eddy's average surroundings. Unit is eddy radii. Default is 1.
 
     Returns
     -------
@@ -181,12 +188,14 @@ def average_surroundings(indeces, interpolated, t_index):
         over the surroundings of the eddy (+1 radius in each direction).
     """
     # Calculate the radius of the eddy in "index space"
-    radius = int(((np.max(indeces[0, :]) - np.min(indeces[0, :])) / 2))
+    radius1 = int(((np.max(indeces[0, :]) - np.min(indeces[0, :])) / 2))
+    radius2 = int(((np.max(indeces[1, :]) - np.min(indeces[1, :])) / 2))
+    radius = int((radius1 + radius2) / 2)
     # add one radiues in each direction to define what are the surroundings
-    imin = np.min(indeces[0, :]) - radius
-    imax = np.max(indeces[0, :]) + radius + 1
-    jmin = np.min(indeces[1, :]) - radius
-    jmax = np.max(indeces[1, :]) + radius + 1
+    imin = np.min(indeces[0, :]) - (d_surr * radius)
+    imax = np.max(indeces[0, :]) + (d_surr * radius) + 1
+    jmin = np.min(indeces[1, :]) - (d_surr * radius)
+    jmax = np.max(indeces[1, :]) + (d_surr * radius) + 1
     if len(interpolated.shape) == 3:
         sum1 = interpolated[
                    t_index, jmin:jmax, imin:imax].sum(axis=(0, 1)).values
@@ -268,6 +277,9 @@ def write_to_netcdf(file_name, sample, sample_param, data):
             'type': 'anticyclonic', # type of eddy
             'lifetime': 20, # length of the eddy's track in days
             'size': 20, # eddy size (diameter in km)
+            'd_surr' : 1 # Distance from eddy edge to take into account for the
+                         # computation of the eddy's average surroundings. Unit
+                         # is eddy radii.
             'range': False, # sample eddy within a range of `var_range`
             'ds_range': data_int.isel(z=9), # dataset of `var_range`
             'var_range': ['votemper'], # variable to base the range on
@@ -465,6 +477,9 @@ def sample_core(track, data, data_whole, sample_param, i, j,
             'type': 'anticyclonic', # type of eddy
             'lifetime': 20, # length of the eddy's track in days
             'size': 20, # eddy size (diameter in km)
+            'd_surr' : 1 # Distance from eddy edge to take into account for the
+                         # computation of the eddy's average surroundings. Unit
+                         # is eddy radii.
             'range': False, # sample eddy within a range of `var_range`
             'ds_range': data_int.isel(z=9), # dataset of `var_range`
             'var_range': ['votemper'], # variable to base the range on
@@ -695,6 +710,9 @@ def prepare(data_in, sample_param, tracks):
             'type': 'anticyclonic', # type of eddy
             'lifetime': 20, # length of the eddy's track in days
             'size': 20, # eddy size (diameter in km)
+            'd_surr' : 1 # Distance from eddy edge to take into account for the
+                         # computation of the eddy's average surroundings. Unit
+                         # is eddy radii.
             'range': False, # sample eddy within a range of `var_range`
             'ds_range': data_int.isel(z=9), # dataset of `var_range`
             'var_range': ['votemper'], # variable to base the range on
@@ -830,6 +848,9 @@ def sample(tracks, data, sample_param):
             'type': 'anticyclonic', # type of eddy
             'lifetime': 20, # length of the eddy's track in days
             'size': 20, # eddy size (diameter in km)
+            'd_surr' : 1 # Distance from eddy edge to take into account for the
+                         # computation of the eddy's average surroundings. Unit
+                         # is eddy radii.
             'range': False, # sample eddy within a range of `var_range`
             'ds_range': data_int.isel(z=9), # dataset of `var_range`
             'var_range': ['votemper'], # variable to base the range on
