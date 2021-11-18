@@ -188,14 +188,14 @@ def average_surroundings(indeces, interpolated, t_index, d_surr=1):
         over the surroundings of the eddy (+1 radius in each direction).
     """
     # Calculate the radius of the eddy in "index space"
-    radius1 = int(((np.max(indeces[0, :]) - np.min(indeces[0, :])) / 2))
-    radius2 = int(((np.max(indeces[1, :]) - np.min(indeces[1, :])) / 2))
-    radius = int((radius1 + radius2) / 2)
+    radius1 = (np.max(indeces[0, :]) - np.min(indeces[0, :])) / 2
+    radius2 = (np.max(indeces[1, :]) - np.min(indeces[1, :])) / 2
+    radius = (radius1 + radius2) / 2
     # add one radiues in each direction to define what are the surroundings
-    imin = np.min(indeces[0, :]) - (d_surr * radius)
-    imax = np.max(indeces[0, :]) + (d_surr * radius) + 1
-    jmin = np.min(indeces[1, :]) - (d_surr * radius)
-    jmax = np.max(indeces[1, :]) + (d_surr * radius) + 1
+    imin = np.min(indeces[0, :]) - int(d_surr * radius)
+    imax = np.max(indeces[0, :]) + int(d_surr * radius) + 1
+    jmin = np.min(indeces[1, :]) - int(d_surr * radius)
+    jmax = np.max(indeces[1, :]) + int(d_surr * radius) + 1
     if len(interpolated.shape) == 3:
         sum1 = interpolated[
                    t_index, jmin:jmax, imin:imax].sum(axis=(0, 1)).values
