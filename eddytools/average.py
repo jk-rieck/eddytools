@@ -36,7 +36,8 @@ def nan_mult_zero(arg1, arg2):
     result[where_one_zero] = 0
     return result
 
-def interp(sampled, v, t, lon_interp, method, anom=True):
+def interp(sampled, v, t, int_vec=101, method='nearest', sec='zonal',
+           anom=True):
     '''Interpolate the normalized longitudes onto a common vector.
 
     Parameters
@@ -58,46 +59,53 @@ def interp(sampled, v, t, lon_interp, method, anom=True):
         Section of `v` interpolated onto common normalized longitude
         vector.
     '''
+    if sec == 'zonal':
+        secc = 'sec_zon'
+        norm = secc + '_norm_lon'
+    elif sec == 'meridional':
+        secc = 'sec_mer'
+        norm = secc + '_norm_lat'
     if anom:
-        if len(np.shape(sampled[v + '_sec'].isel(time=t).squeeze())) == 2:
-            interp_lon = interp1d(
-                sampled[v + '_sec_norm_lon'].isel(time=t)
-                .dropna('sec_index', how='all'),
-                sampled[v + '_sec'].isel(time=t)
-                .dropna('sec_index', how='all').squeeze()
+        if len(np.shape(sampled[v + '_' + secc].isel(time=t).squeeze())) == 2:
+            interpol = interp1d(
+                sampled[v + '_' + norm].isel(time=t)
+                .dropna(secc + '_index', how='all'),
+                sampled[v + '_' + secc].isel(time=t)
+                .dropna(secc + '_index', how='all').squeeze()
                 - sampled[v + '_around'].isel(time=t),
                 axis=1, fill_value="extrapolate", kind=method
                 )
-        elif len(np.shape(sampled[v + '_sec'].isel(time=t).squeeze())) == 1:
-            interp_lon = interp1d(
-                sampled[v + '_sec_norm_lon'].isel(time=t)
-                .dropna('sec_index', how='all'),
-                sampled[v + '_sec'].isel(time=t)
-                .dropna('sec_index', how='all').squeeze()
+        elif len(np.shape(sampled[v + '_' + secc].isel(time=t).squeeze())) == 1:
+            interpol = interp1d(
+                sampled[v + '_' + norm].isel(time=t)
+                .dropna(secc + '_index', how='all'),
+                sampled[v + '_' + secc].isel(time=t)
+                .dropna(secc + '_index', how='all').squeeze()
                 - sampled[v + '_around'].isel(time=t),
                 axis=0, fill_value="extrapolate", kind=method
                 )
     else:
-        if len(np.shape(sampled[v + '_sec'].isel(time=t).squeeze())) == 2:
-            interp_lon = interp1d(
-                sampled[v + '_sec_norm_lon'].isel(time=t)
-                .dropna('sec_index', how='all'),
-                sampled[v + '_sec'].isel(time=t)
-                .dropna('sec_index', how='all').squeeze(),
+        if len(np.shape(sampled[v + '_' + secc].isel(time=t).squeeze())) == 2:
+            interpol = interp1d(
+                sampled[v + '_' + norm].isel(time=t)
+                .dropna(secc + '_index', how='all'),
+                sampled[v + '_' + secc].isel(time=t)
+                .dropna(secc + '_index', how='all').squeeze(),
                 axis=1, fill_value="extrapolate", kind=method
                 )
-        elif len(np.shape(sampled[v + '_sec'].isel(time=t).squeeze())) == 1:
-            interp_lon = interp1d(
-                sampled[v + '_sec_norm_lon'].isel(time=t)
-                .dropna('sec_index', how='all'),
-                sampled[v + '_sec'].isel(time=t)
-                .dropna('sec_index', how='all').squeeze(), axis=0,
+        elif len(np.shape(sampled[v + '_' + secc].isel(time=t).squeeze())) == 1:
+            interpol = interp1d(
+                sampled[v + '_' + norm].isel(time=t)
+                .dropna(secc + '_index', how='all'),
+                sampled[v + '_' + secc].isel(time=t)
+                .dropna(secc + '_index', how='all').squeeze(), axis=0,
                 fill_value="extrapolate", kind=method
                 )
-    return interp_lon(lon_interp)
+    return interpol(int_vec)
 
 
-def prepare(sampled, vars, lon_int=101, method='nearest'):
+def prepare(sampled, vars, interp_vec=101, interp_method='nearest',
+            section='zonal'):
     ''' Preparation for the averaging of eddy sections to construct a mean
     eddy (that still has a temporal evolution). Only anomalies to the eddy's
     surrounding are considered.
@@ -108,10 +116,14 @@ def prepare(sampled, vars, lon_int=101, method='nearest'):
         Dictionary containing the eddies to be averaged.
     vars : dict
         Variables to average for every single eddy.
-    lon_int : int
-        Length of the normalized longitude vector to interpolate to.
-    method : str
-        Interpolation method.
+    interp_vec : int
+        Length of the normalized vector to interpolate the section to.
+    interp_method : str
+        Interpolation method. (must be valid method of
+        scipy.interpolate.interp1d() ).
+    section : str
+        String to indicate in which section to take, must be either 'zonal'
+        or 'meridional'.
 
     Returns
     -------
@@ -120,9 +132,9 @@ def prepare(sampled, vars, lon_int=101, method='nearest'):
         by months that can then be averaged. aves[v][m] = arr, where v in
         `vars`, m in ['01', '02', ... , '12']. The arrays `arr` have the
         dimensions `(e, t, z, x)`, where `e` is the eddy number, `t` is the
-        time step, `z` is the depth, and `x` is the longitude.
+        time step, `z` is the depth, and `x` is the section index.
     '''
-    lon_interp = np.linspace(-0.5, 0.5, lon_int)
+    int_vec = np.linspace(-0.5, 0.5, interp_vec)
     len_z = len(sampled[1]['depth'])
     max_time = 0
     for ed in np.arange(1, len(sampled) + 1):
@@ -136,19 +148,19 @@ def prepare(sampled, vars, lon_int=101, method='nearest'):
         aves[v + '_around'] = {}
         for ed in np.arange(1, len(sampled) + 1):
             month = str(sampled[ed]['time'][0].values)[5:7]
-            if len(np.shape(sampled[ed][v + '_sec'][0].squeeze())) == 2:
+            if len(np.shape(sampled[ed][v + '_sec_zon'][0].squeeze())) == 2:
                 try:
                     aves[v + '_anom'][month] =\
                         np.vstack(
                             (aves[v + '_anom'][month],
                              np.zeros((1, max_time,
-                                       len_z, len(lon_interp))) + np.nan)
+                                       len_z, len(int_vec))) + np.nan)
                             )
                     aves[v][month] =\
                         np.vstack(
                             (aves[v][month],
                              np.zeros((1, max_time,
-                                       len_z, len(lon_interp))) + np.nan)
+                                       len_z, len(int_vec))) + np.nan)
                             )
                     aves[v + '_around'][month] =\
                         np.vstack(
@@ -159,35 +171,35 @@ def prepare(sampled, vars, lon_int=101, method='nearest'):
                 except:
                     aves[v + '_anom'][month] =\
                         np.zeros((1, max_time, len_z,
-                                  len(lon_interp))) + np.nan
+                                  len(int_vec))) + np.nan
                     aves[v][month] =\
                         np.zeros((1, max_time, len_z,
-                                  len(lon_interp))) + np.nan
+                                  len(int_vec))) + np.nan
                     aves[v + '_around'][month] =\
                         np.zeros((1, max_time, len_z)) + np.nan
                 e = np.shape(aves[v + '_anom'][month])[0] - 1
                 for m in np.arange(0, len(sampled[ed]['time'])):
                     aves[v + '_anom'][month][e, m, :, :] =\
-                        interp(sampled[ed], v, m, lon_interp,
-                               method=method, anom=True)
+                        interp(sampled[ed], v, m, int_vec,
+                               method=interp_method, anom=True, sec=section)
                     aves[v][month][e, m, :, :] =\
-                        interp(sampled[ed], v, m, lon_interp,
-                               method=method, anom=False)
+                        interp(sampled[ed], v, m, int_vec,
+                               method=interp_method, anom=False, sec=section)
                     aves[v + '_around'][month][e, m, :] =\
                         sampled[ed][v + '_around'][m]
-            elif len(np.shape(sampled[ed][v + '_sec'][0].squeeze())) == 1:
+            elif len(np.shape(sampled[ed][v + '_sec_zon'][0].squeeze())) == 1:
                 try:
                     aves[v + '_anom'][month] =\
                         np.vstack(
                             (aves[v + '_anom'][month],
                              np.zeros((1, max_time,
-                                       len(lon_interp))) + np.nan)
+                                       len(int_vec))) + np.nan)
                              )
                     aves[v][month] =\
                         np.vstack(
                             (aves[v][month],
                              np.zeros((1, max_time,
-                                       len(lon_interp))) + np.nan)
+                                       len(int_vec))) + np.nan)
                              )
                     aves[v + '_around'][month] =\
                         np.vstack(
@@ -196,19 +208,19 @@ def prepare(sampled, vars, lon_int=101, method='nearest'):
                              )
                 except:
                     aves[v + '_anom'][month] =\
-                        np.zeros((1, max_time, len(lon_interp))) + np.nan
+                        np.zeros((1, max_time, len(int_vec))) + np.nan
                     aves[v][month] =\
-                        np.zeros((1, max_time, len(lon_interp))) + np.nan
+                        np.zeros((1, max_time, len(int_vec))) + np.nan
                     aves[v + '_around'][month] =\
                         np.zeros((1, max_time)) + np.nan
                 e = np.shape(aves[v + '_anom'][month])[0] - 1
                 for m in np.arange(0, len(sampled[ed]['time'])):
                     aves[v + '_anom'][month][e, m, :] =\
-                        interp(sampled[ed], v, m, lon_interp,
-                               method=method, anom=True)
+                        interp(sampled[ed], v, m, int_vec,
+                               method=interp_method, anom=True, sec=section)
                     aves[v][month][e, m, :] =\
-                        interp(sampled[ed], v, m, lon_interp,
-                               method=method, anom=False)
+                        interp(sampled[ed], v, m, int_vec,
+                               method=interp_method, anom=False, sec=section)
                     aves[v + '_around'][month][e, m] =\
                         sampled[ed][v + '_around'][m]
         for mon in ['01', '02', '03', '04', '05', '06',
@@ -216,18 +228,18 @@ def prepare(sampled, vars, lon_int=101, method='nearest'):
             try:
                 test_month = aves[v][mon]
             except:
-                if len(np.shape(sampled[1][v + '_sec'][0].squeeze())) == 2:
+                if len(np.shape(sampled[1][v + '_sec_zon'][0].squeeze())) == 2:
                     aves[v + '_anom'][mon] = np.zeros((1, max_time, len_z,
-                                                 len(lon_interp))) + np.nan
+                                                 len(int_vec))) + np.nan
                     aves[v][mon] = np.zeros((1, max_time,
-                                             len_z, len(lon_interp))) + np.nan
+                                             len_z, len(int_vec))) + np.nan
                     aves[v + '_around'][mon] = np.zeros((1, max_time,
                                                          len_z)) + np.nan
-                elif len(np.shape(sampled[1][v + '_sec'][0].squeeze())) == 1:
+                elif len(np.shape(sampled[1][v +'_sec_zon'][0].squeeze())) == 1:
                     aves[v + '_anom'][mon] = np.zeros((1, max_time,
-                                                 len(lon_interp))) + np.nan
+                                                 len(int_vec))) + np.nan
                     aves[v][mon] = np.zeros((1, max_time,
-                                             len(lon_interp))) + np.nan
+                                             len(int_vec))) + np.nan
                     aves[v + '_around'][mon] = np.zeros((1, max_time)) + np.nan
     return aves
 
