@@ -88,9 +88,9 @@ def horizontal(data, metrics, int_param):
             print('Interpolating from model grid: ' + int_param['model'])
             o = True
             latlon = True
-            dat_lon = 'nav_lon'
-            dat_lat = 'nav_lat'
-            dat_time = 'time_counter'
+            dat_lon = 'llon_cc'
+            dat_lat = 'llat_cc'
+            dat_time = 't'
     else:
         print('Interpolation from model grid: ' + int_param['model']
               + ' not implemented!')
