@@ -798,8 +798,8 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False):
     e1f = maskandcut(data, e1f_name, det_param)
     e2f = maskandcut(data, e2f_name, det_param)
     ## create list of incremental threshold
-    ssh_crits = np.arange(0,
-                          3 * det_param['ssh_thr'] + det_param['dssh'] / 2,
+    ssh_crits = np.arange(-det_param['ssh_thr'],
+                          det_param['ssh_thr'] + det_param['dssh'] / 2,
                           det_param['dssh'])
     ssh_crits = np.sort(ssh_crits) # make sure its increasing order
     if use_bags:
