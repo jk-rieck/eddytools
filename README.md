@@ -30,7 +30,7 @@ pip install -e .
 
 2. Install from the repository using
   ~~~bash
-  pip install git+https://git.geomar.de/jrieck-archive/eddytools.git@v0.1
+  pip install git+https://git.geomar.de/jrieck-archive/eddytools.git@v0.3
   ~~~
 
 ## Usage
