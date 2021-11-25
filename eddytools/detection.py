@@ -136,7 +136,7 @@ def monotonic_lon(var, det_param):
     if var['lon'][0] > var['lon'][-1]:
         lon_mod = var['lon']\
             .where(var['lon']
-                   >= np.around(var['lon'][0].values),
+                   >= var['lon'][0].values,
                    other=var['lon'] + 360)
         var = var.assign_coords({'lon': lon_mod})
         if det_param['lon1'] < lon_mod[0]:
