@@ -589,7 +589,7 @@ def monotonic_lon(var_to_int):
     if var_to_int['lon'][0, 0] > var_to_int['lon'][0, -1]:
         lon_mod = var_to_int['lon']\
             .where(var_to_int['lon']
-                   > np.around(var_to_int['lon'][0, 0].values),
+                   >= var_to_int['lon'][0, 0].values,
                    other=var_to_int['lon'] + 360)
         var_to_int_out = var_to_int_out.assign_coords({'lon': lon_mod})
     return var_to_int_out
