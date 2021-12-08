@@ -244,7 +244,8 @@ def prepare(sampled, vars, interp_vec=101, interp_method='nearest',
     return aves
 
 
-def seasonal(eddies, variables):
+def seasonal(eddies, variables, ave_start=0, ave_len=1):
+    ave_stop = ave_start + ave_len
     out = {}
     center = 0
     months = ['01', '02', '03', '04', '05', '06',
@@ -306,26 +307,29 @@ def seasonal(eddies, variables):
 
                         def extract(array, meth):
                             if meth == 'ave':
-                                ar = array[:, 0, :, :]
+                                ar = np.mean(array[:, ave_start:ave_stop,
+                                                   :, :], axis=1)
                             elif meth == 'evo':
                                 ar = array[:, :, :, center]
                             return ar
 
                         def extract_around(array):
-                            ar = array[:, 0, :]
+                            ar = np.mean(array[:, ave_start:ave_stop,
+                                               :], axis=1)
                             return ar
 
                     elif len(np.shape(eddies[var + '_anom'][one])) == 3:
 
                         def extract(array, meth):
                             if meth == 'ave':
-                                ar = array[:, 0, :]
+                                ar = np.mean(array[:, ave_start:ave_stop,
+                                                   :], axis=1)
                             elif meth == 'evo':
                                 ar = array[:, :, center]
                             return ar
 
                         def extract_around(array):
-                            ar = array[:, 0]
+                            ar = np.mean(array[:, ave_start:ave_stop], axis=1)
                             return ar
 
                     if quant == 'count':
@@ -423,7 +427,8 @@ def seasonal(eddies, variables):
     return out
 
 
-def monthly(eddies, variables):
+def monthly(eddies, variables, ave_start=0, ave_len=1):
+    ave_stop = ave_start + ave_len
     out = {}
     center = 0
     months = ['01', '02', '03', '04', '05', '06',
@@ -470,26 +475,29 @@ def monthly(eddies, variables):
 
                         def extract(array, meth):
                             if meth == 'ave':
-                                ar = array[:, 0, :, :]
+                                ar = np.mean(array[:, ave_start:ave_stop,
+                                                   :, :], axis=1)
                             elif meth == 'evo':
                                 ar = array[:, :, :, center]
                             return ar
 
                         def extract_around(array):
-                            ar = array[:, 0, :]
+                            ar = np.mean(array[:, ave_start:ave_stop,
+                                               :], axis=1)
                             return ar
 
                     elif len(np.shape(eddies[var + '_anom'][m])) == 3:
 
                         def extract(array, meth):
                             if meth == 'ave':
-                                ar = array[:, 0, :]
+                                ar = np.mean(array[:, ave_start:ave_stop,
+                                                   :], axis=1)
                             elif meth == 'evo':
                                 ar = array[:, :, center]
                             return ar
 
                         def extract_around(array):
-                            ar = array[:, 0]
+                            ar = np.mean(array[:, ave_start:ave_stop], axis=1)
                             return ar
 
                     out[meth][quant][m][var + '_anom'] =\
