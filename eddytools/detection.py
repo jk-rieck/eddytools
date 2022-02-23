@@ -326,19 +326,23 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
         min_width = int(np.floor(np.sqrt(region_Npix) / 2))
         X_cen = int(np.floor(np.mean(index[1])))
         Y_cen = int(np.floor(np.mean(index[0])))
+        if len(np.shape(data[det_param['OW_thr_name']])) > 1:
+            peak_thr = OW_thr.values[interior].mean()
+        else:
+            peak_thr = OW_thr
         X_peaks = len(find_peaks(-OW.isel(time=t).values[Y_cen, iimin:iimax],
-                                 height=-OW_thr)[0])
+                                 height=-peak_thr)[0])
         Y_peaks = len(find_peaks(-OW.isel(time=t).values[ijmin:ijmax, X_cen],
-                                 height=-OW_thr)[0])
+                                 height=-peak_thr)[0])
         if ((X_peaks > 1) | (Y_peaks > 1)):
             Y_start = np.argmax(OW.isel(time=t).values[ijmin:ijmax, X_cen]
-                                > OW_thr)
+                                > peak_thr)
             Ypix_cen = np.argmax(OW.isel(time=t).values[Y_start:ijmax, X_cen]
-                                 <= OW_thr)
+                                 <= peak_thr)
             X_start = np.argmax(OW.isel(time=t).values[Y_cen, iimin:iimax]
-                                > OW_thr)
+                                > peak_thr)
             Xpix_cen = np.argmax(OW.isel(time=t).values[Y_cen, X_start:iimax]
-                                 <= OW_thr)
+                                 <= peak_thr)
         else:
             Ypix_cen = np.sum(index[1] == X_cen)
             Xpix_cen = np.sum(index[0] == Y_cen)
