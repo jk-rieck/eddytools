@@ -328,6 +328,8 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
         iimax = index[1].max() + 1
         ijmin = index[0].min()
         ijmax = index[0].max() + 1
+        if ((iimax == 1) | (ijmax == 1)):
+            continue
         region = (regions == iregion + 1).astype(int)
         # Loop through all regions detected as eddy at each time step
         eddi[e] = {}
