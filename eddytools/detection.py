@@ -330,6 +330,16 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
         ijmax = index[0].max() + 1
         if ((iimax == 1) | (ijmax == 1)):
             continue
+        iimin2 = iimin
+        ijmin2 = ijmin
+        if iimin == 0:
+            iimin2 = 0
+        else:
+            iimin2 = iimin - 1
+        if ijmin == 0:
+            ijmin2 = 0
+        else:
+            ijmin2 = ijmin - 1
         region = (regions == iregion + 1).astype(int)
         # Loop through all regions detected as eddy at each time step
         eddi[e] = {}
@@ -358,12 +368,12 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
         if ((X_peaks > 1) | (Y_peaks > 1)):
             Ypix_cen1 = get_width(OW.isel(time=t).values[ijmin:ijmax, X_cen],
                                   peak_thr)
-            Ypix_cen2 = get_width(OW.isel(time=t).values[ijmax-1:ijmin-1:-1,
+            Ypix_cen2 = get_width(OW.isel(time=t).values[ijmax-1:ijmin2:-1,
                                                          X_cen], peak_thr)
             Xpix_cen1 = get_width(OW.isel(time=t).values[Y_cen, iimin:iimax],
                                                          peak_thr)
             Xpix_cen2 = get_width(OW.isel(time=t).values[Y_cen, 
-                                                         iimax-1:iimin-1:-1], 
+                                                         iimax-1:iimin2:-1], 
                                   peak_thr)
         else:
             Ypix_cen1 = np.sum(index[1] == X_cen)
