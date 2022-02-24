@@ -218,7 +218,7 @@ def distance_matrix(lons, lats):
         d[c<1,i2] = EARTH_RADIUS * np.arccos(c[c<1])
     return d
 
-def get_eddy_width(data, thr):
+def get_width(data, thr):
     '''Calculate the width of an eddy in grid cell space
 
     Parameters
