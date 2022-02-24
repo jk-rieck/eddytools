@@ -218,6 +218,25 @@ def distance_matrix(lons, lats):
         d[c<1,i2] = EARTH_RADIUS * np.arccos(c[c<1])
     return d
 
+def get_eddy_width(data, thr):
+    '''Calculate the width of an eddy in grid cell space
+
+    Parameters
+    ----------
+    data : array
+        1D array with values of the OW parameter across the detected feature.
+    thr : float
+        The OW-threshold below which an area is considered and eddy.
+
+    Returns
+    -------
+    width : int
+        Width of the eddy as measured in number of grid cells.
+    '''
+    start = np.argmax(data < thr)
+    end = np.argmax(data[start::] >= thr) + 1
+    return np.sum(data[start:start+end] <= thr)
+
 
 def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
     ''' Core function for the detection of eddies, used by detect_OW().
@@ -323,7 +342,7 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
         if interior.sum() == 0:
             del eddi[e]
             continue
-        min_width = int(np.floor(np.sqrt(region_Npix) / 2))
+        min_width = int(np.floor(np.sqrt(region_Npix / np.pi)))
         X_cen = int(np.floor(np.mean(index[1])))
         Y_cen = int(np.floor(np.mean(index[0])))
         if len(np.shape(data[det_param['OW_thr_name']])) > 1:
@@ -335,18 +354,28 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
         Y_peaks = len(find_peaks(-OW.isel(time=t).values[ijmin:ijmax, X_cen],
                                  height=-peak_thr)[0])
         if ((X_peaks > 1) | (Y_peaks > 1)):
-            Y_start = np.argmax(OW.isel(time=t).values[ijmin:ijmax, X_cen]
-                                > peak_thr)
-            Ypix_cen = np.argmax(OW.isel(time=t).values[Y_start:ijmax, X_cen]
-                                 <= peak_thr)
-            X_start = np.argmax(OW.isel(time=t).values[Y_cen, iimin:iimax]
-                                > peak_thr)
-            Xpix_cen = np.argmax(OW.isel(time=t).values[Y_cen, X_start:iimax]
-                                 <= peak_thr)
+            Ypix_cen1 = get_width(OW.isel(time=t).values[ijmin:ijmax, X_cen],
+                                  peak_thr)
+            Ypix_cen2 = get_width(OW.isel(time=t).values[ijmax-1:ijmin-1:-1,
+                                                         X_cen], peak_thr)
+            Xpix_cen1 = get_width(OW.isel(time=t).values[Y_cen, iimin:iimax],
+                                                         peak_thr)
+            Xpix_cen2 = get_width(OW.isel(time=t).values[Y_cen, 
+                                                         iimax-1:iimin-1:-1], 
+                                  peak_thr)
         else:
-            Ypix_cen = np.sum(index[1] == X_cen)
-            Xpix_cen = np.sum(index[0] == Y_cen)
-        eddy_not_too_thin = ((Xpix_cen > min_width) & (Ypix_cen > min_width))
+            Ypix_cen1 = np.sum(index[1] == X_cen)
+            Ypix_cen2 = np.sum(index[1] == X_cen)
+            Xpix_cen1 = np.sum(index[0] == Y_cen)
+            Xpix_cen2 = np.sum(index[0] == Y_cen)
+        eddy_not_too_thin = (((Xpix_cen1 > min_width) 
+                            & (Ypix_cen1 > min_width)) |
+                             ((Xpix_cen2 > min_width) 
+                            & (Ypix_cen2 > min_width)) |
+                             ((Xpix_cen2 > min_width) 
+                            & (Ypix_cen1 > min_width)) |
+                             ((Xpix_cen1 > min_width) 
+                            & (Ypix_cen2 > min_width)))
         # check for local extrema
         has_internal_ext = (OW.isel(time=t).values[interior].min()
                             < OW.isel(time=t).values[exterior].min())
