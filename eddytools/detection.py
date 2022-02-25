@@ -10,6 +10,7 @@ needs to have the same structure.
 import numpy as np
 import pandas as pd
 from scipy import ndimage
+from scipy.signal import find_peaks
 import cftime as cft
 try:
     from dask import bag as dask_bag
@@ -217,6 +218,25 @@ def distance_matrix(lons, lats):
         d[c<1,i2] = EARTH_RADIUS * np.arccos(c[c<1])
     return d
 
+def get_width(data, thr):
+    '''Calculate the width of an eddy in grid cell space
+
+    Parameters
+    ----------
+    data : array
+        1D array with values of the OW parameter across the detected feature.
+    thr : float
+        The OW-threshold below which an area is considered and eddy.
+
+    Returns
+    -------
+    width : int
+        Width of the eddy as measured in number of grid cells.
+    '''
+    start = np.argmax(data < thr)
+    end = np.argmax(data[start::] >= thr) + 1
+    return np.sum(data[start:start+end] <= thr)
+
 
 def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
     ''' Core function for the detection of eddies, used by detect_OW().
@@ -304,6 +324,22 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
     e = 0
     for iregion in list(range(nregions - 1)):
         index = region_index[iregion + 1]
+        iimin = index[1].min()
+        iimax = index[1].max() + 1
+        ijmin = index[0].min()
+        ijmax = index[0].max() + 1
+        if ((iimax == 1) | (ijmax == 1)):
+            continue
+        iimin2 = iimin
+        ijmin2 = ijmin
+        if iimin == 0:
+            iimin2 = 0
+        else:
+            iimin2 = iimin - 1
+        if ijmin == 0:
+            ijmin2 = 0
+        else:
+            ijmin2 = ijmin - 1
         region = (regions == iregion + 1).astype(int)
         # Loop through all regions detected as eddy at each time step
         eddi[e] = {}
@@ -312,18 +348,47 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
         region_Npix = region.sum()
         eddy_area_within_limits = ((region_Npix < det_param['Npix_max'])
                                    * (region_Npix > det_param['Npix_min']))
-        min_width = int(np.floor(np.sqrt(region_Npix) / 2))
-        X_cen = int(np.floor(np.mean(index[1])))
-        Y_cen = int(np.floor(np.mean(index[0])))
-        Ypix_cen = np.sum(index[1] == X_cen)
-        Xpix_cen = np.sum(index[0] == Y_cen)
-        eddy_not_too_thin = ((Xpix_cen > min_width) & (Ypix_cen > min_width))
-        # check for local extrema
+        # define interior and exterior
         interior = ndimage.binary_erosion(region)
         exterior = region.astype(bool) ^ interior
         if interior.sum() == 0:
             del eddi[e]
             continue
+        min_width = int(np.floor(np.sqrt(region_Npix / np.pi)))
+        X_cen = int(np.floor(np.mean(index[1])))
+        Y_cen = int(np.floor(np.mean(index[0])))
+        if len(np.shape(data[det_param['OW_thr_name']])) > 1:
+            peak_thr = OW_thr.values[interior].mean()
+        else:
+            peak_thr = OW_thr
+        X_peaks = len(find_peaks(-OW.isel(time=t).values[Y_cen, iimin:iimax],
+                                 height=-peak_thr)[0])
+        Y_peaks = len(find_peaks(-OW.isel(time=t).values[ijmin:ijmax, X_cen],
+                                 height=-peak_thr)[0])
+        if ((X_peaks > 1) | (Y_peaks > 1)):
+            Ypix_cen1 = get_width(OW.isel(time=t).values[ijmin:ijmax, X_cen],
+                                  peak_thr)
+            Ypix_cen2 = get_width(OW.isel(time=t).values[ijmax-1:ijmin2:-1,
+                                                         X_cen], peak_thr)
+            Xpix_cen1 = get_width(OW.isel(time=t).values[Y_cen, iimin:iimax],
+                                                         peak_thr)
+            Xpix_cen2 = get_width(OW.isel(time=t).values[Y_cen, 
+                                                         iimax-1:iimin2:-1], 
+                                  peak_thr)
+        else:
+            Ypix_cen1 = np.sum(index[1] == X_cen)
+            Ypix_cen2 = np.sum(index[1] == X_cen)
+            Xpix_cen1 = np.sum(index[0] == Y_cen)
+            Xpix_cen2 = np.sum(index[0] == Y_cen)
+        eddy_not_too_thin = (((Xpix_cen1 > min_width) 
+                            & (Ypix_cen1 > min_width)) |
+                             ((Xpix_cen2 > min_width) 
+                            & (Ypix_cen2 > min_width)) |
+                             ((Xpix_cen2 > min_width) 
+                            & (Ypix_cen1 > min_width)) |
+                             ((Xpix_cen1 > min_width) 
+                            & (Ypix_cen2 > min_width)))
+        # check for local extrema
         has_internal_ext = (OW.isel(time=t).values[interior].min()
                             < OW.isel(time=t).values[exterior].min())
         if (eddy_area_within_limits & eddy_not_too_thin
@@ -332,10 +397,6 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             # eddy information
             eddi[e]['time'] = OW.isel(time=t)['time'].values
             # find centre of mass of eddy
-            iimin = index[1].min()
-            iimax = index[1].max() + 1
-            ijmin = index[0].min()
-            ijmax = index[0].max() + 1
             index_eddy = (index[0] - ijmin, index[1] - iimin)
             tmp = OW.isel(time=t, lat=slice(ijmin, ijmax),
                           lon=slice(iimin, iimax)).values.copy()
