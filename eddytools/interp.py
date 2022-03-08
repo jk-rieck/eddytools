@@ -68,6 +68,7 @@ def horizontal(data, metrics, int_param, weights=None):
     cart = False
     m = False
     o = False
+    regridder = None
     # Check if `model` is either 'MITgcm' or 'ORCA' and which grid it uses
     if (int_param['model'] == 'MITgcm'):
         if int_param['grid'] == 'latlon':
