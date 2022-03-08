@@ -293,6 +293,8 @@ def horizontal(data, metrics, int_param, weights=None):
                                     lat=slice(lat[0], lat[-1]))
         # Update `data_int` with the regridded/interpolated variable
         data_int = update_data(data_int, var_int, var)
+        # rename the regridder to return it later
+        regridder_return = regridder.copy()
 
     # Always interpolate fmask, e1f and e2f
     if fmask not in int_param['mask_to_interpolate']:
@@ -357,7 +359,7 @@ def horizontal(data, metrics, int_param, weights=None):
         tmp_lon = data_int['lon'].copy().where(data_int['lon'] >= -180.,
                                                other=data_int['lon'] + 360)
         data_int = data_int.assign_coords({'lon': tmp_lon})
-    return data_int
+    return data_int, regridder_return
 
 
 def create_rect_grid(int_param):
