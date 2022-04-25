@@ -30,7 +30,7 @@ pip install -e .
 
 2. Install from the repository using
   ~~~bash
-  pip install git+https://github.com/jk-rieck/eddytools.git@master
+  pip install git+https://github.com/jk-rieck/eddytools.git@main
   ~~~
 
 ## Usage
