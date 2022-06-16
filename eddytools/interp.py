@@ -591,7 +591,7 @@ def monotonic_lon(var_to_int):
     '''
     var_to_int_out = var_to_int
     # Make sure the longitude is monotonically increasing for the interpolation
-    if (var_to_int['lon'][1, :] - var_to_int['lon'][0, -1] < 0).any().values:
+    if (np.diff(var_to_int['lon'][1, :]) < 0).any():
         min_lon = np.min([var_to_int['lon'][0, 0].values,
                          var_to_int['lon'][-1, 0].values])
         lon_mod = var_to_int['lon']\
