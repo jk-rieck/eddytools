@@ -530,7 +530,7 @@ def create_empty_ds(data, int_param, lon, lat, t):
     return data_int
 
 
-def rename_dims(var_to_int):
+def rename_dims(var_to_int, int_param):
     '''Rename dimensions of `var_to_int` so they are compatible with the
     grid that we want to interpolate to.
 
@@ -545,53 +545,80 @@ def rename_dims(var_to_int):
         Same as input `var_to_int` but with renamed dimensions.
     '''
     # Define how the variables are called that should be renamed
-    if 'llon_cc' in var_to_int.coords:
-        lon_rename = 'llon_cc'
-        lat_rename = 'llat_cc'
-    elif 'llon_cr' in var_to_int.coords:
-        lon_rename = 'llon_cr'
-        lat_rename = 'llat_cr'
-    elif 'llon_rc' in var_to_int.coords:
-        lon_rename = 'llon_rc'
-        lat_rename = 'llat_rc'
-    elif 'llon_rr' in var_to_int.coords:
-        lon_rename = 'llon_rr'
-        lat_rename = 'llat_rr'
-    elif 'XC' in var_to_int.coords and 'YC' in var_to_int.coords:
-        lon_rename = 'XC'
-        lat_rename = 'YC'
-    elif 'XC' in var_to_int.coords and 'YG' in var_to_int.coords:
-        lon_rename = 'XC'
-        lat_rename = 'YG'
-    elif 'XG' in var_to_int.coords and 'YC' in var_to_int.coords:
-        lon_rename = 'XG'
-        lat_rename = 'YC'
-    elif 'XG' in var_to_int.coords and 'YG' in var_to_int.coords:
-        lon_rename = 'XG'
-        lat_rename = 'YG'
-    else:
-        raise ValueError('No valid coordinates have been found. Data must be'
-                         + 'compatible with xgcm!')
+    if int_param['model'] == 'ORCA':
+        if 'llon_cc' in var_to_int.coords:
+            lon_rename = 'llon_cc'
+            lat_rename = 'llat_cc'
+            lon_b = 'llon_cc_b'
+            lat_b = 'llat_cc_b'
+        elif 'llon_cr' in var_to_int.coords:
+            lon_rename = 'llon_cr'
+            lat_rename = 'llat_cr'
+            lon_b = 'llon_cr_b'
+            lat_b = 'llat_cr_b'
+        elif 'llon_rc' in var_to_int.coords:
+            lon_rename = 'llon_rc'
+            lat_rename = 'llat_rc'
+            lon_b = 'llon_rc_b'
+            lat_b = 'llat_rc_b'
+        elif 'llon_rr' in var_to_int.coords:
+            lon_rename = 'llon_rr'
+            lat_rename = 'llat_rr'
+            lon_b = 'llon_rr_b'
+            lat_b = 'llat_rr_b'
+        else:
+            raise ValueError('No valid coordinates have been found.'
+                             + ' Data must be compatible with xgcm!')
+    elif int_param['model'] == 'MITgcm':
+        if 'XC' in var_to_int.coords and 'YC' in var_to_int.coords:
+            lon_rename = 'XC'
+            lat_rename = 'YC'
+        elif 'XC' in var_to_int.coords and 'YG' in var_to_int.coords:
+            lon_rename = 'XC'
+            lat_rename = 'YG'
+        elif 'XG' in var_to_int.coords and 'YC' in var_to_int.coords:
+            lon_rename = 'XG'
+            lat_rename = 'YC'
+        elif 'XG' in var_to_int.coords and 'YG' in var_to_int.coords:
+            lon_rename = 'XG'
+            lat_rename = 'YG'
+        else:
+            raise ValueError('No valid coordinates have been found.'
+                             + ' Data must be compatible with xgcm!')
     # Define how the depth dimension is called in the original dataset
     # to rename it later
-    if 'z_c' in var_to_int.coords:
-        z_rename = 'z_c'
-    elif 'z_l' in var_to_int.coords:
-        z_rename = 'z_l'
-    elif 'Z' in var_to_int.coords:
-        z_rename = 'Z'
-    elif 'Zl' in var_to_int.coords:
-        z_rename = 'Zl'
+    if int_param['model'] == 'ORCA':
+        if 'z_c' in var_to_int.coords:
+            z_rename = 'z_c'
+        elif 'z_l' in var_to_int.coords:
+            z_rename = 'z_l'
+    elif int_param['model'] == 'MITgcm':
+        if 'Z' in var_to_int.coords:
+            z_rename = 'Z'
+        elif 'Zl' in var_to_int.coords:
+            z_rename = 'Zl'
     # Rename dimensions to `lon`, `lat` and `z` to be compatible with
     # `data_int`
-    if ('z_c' in var_to_int.dims or 'z_l' in var_to_int.dims
-        or 'Z' in var_to_int.dims or 'Zl' in var_to_int.dims):
-        var_to_int_out = var_to_int.rename({lon_rename: 'lon',
-                                            lat_rename: 'lat',
-                                            z_rename: 'z'})
-    else:
-        var_to_int_out = var_to_int.rename({lon_rename: 'lon',
-                                            lat_rename: 'lat'})
+    if int_param['model'] == 'ORCA':
+        if ('z_c' in var_to_int.dims or 'z_l' in var_to_int.dims):
+            var_to_int_out = var_to_int.rename({lon_rename: 'lon',
+                                                lon_b: 'lon_b',
+                                                lat_rename: 'lat',
+                                                lat_b: 'lat_b',
+                                                z_rename: 'z'})
+        else:
+            var_to_int_out = var_to_int.rename({lon_rename: 'lon',
+                                                lon_b: 'lon_b',
+                                                lat_rename: 'lat',
+                                                lat_b: 'lat_b'})
+    elif int_param['model'] == 'MITgcm':
+        if ('Z' in var_to_int.dims or 'Zl' in var_to_int.dims):
+            var_to_int_out = var_to_int.rename({lon_rename: 'lon',
+                                                lat_rename: 'lat',
+                                                z_rename: 'z'})
+        else:
+            var_to_int_out = var_to_int.rename({lon_rename: 'lon',
+                                                lat_rename: 'lat'})
     if 't' in var_to_int.dims:
         var_to_int_out = var_to_int_out.rename({'t': 'time'})
     return var_to_int_out
