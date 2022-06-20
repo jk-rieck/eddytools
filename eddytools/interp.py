@@ -51,6 +51,8 @@ def horizontal(data, metrics, int_param, weights=None):
                          # degrees or m
             'res': 1./10., # resolution of the regular grid to interpolate to
                            # only used when 'grid' == 'latlon'
+            'int_method': 'conservative', # interpolation method
+            'ext_method': 'nearest_s2d', # extrapolation method
             'vars_to_interpolate': ['var1', 'var2', ...],
             'mask_to_interpolate': ['mask1', 'mask2', ...]
             }
@@ -69,6 +71,17 @@ def horizontal(data, metrics, int_param, weights=None):
     m = False
     o = False
     regridder = None
+    # Define interpolation and extrapolation methods
+    try:
+        int_method = int_param['int_method']
+    except:
+        int_method = None
+    if int_method == None:
+        int_method = 'conservative'
+    try:
+        ext_method = int_param['ext_method']
+    except:
+        ext_method = None
     # Check if `model` is either 'MITgcm' or 'ORCA' and which grid it uses
     if (int_param['model'] == 'MITgcm'):
         if int_param['grid'] == 'latlon':
@@ -257,7 +270,9 @@ def horizontal(data, metrics, int_param, weights=None):
             # Interpolate on regular grid using the xesmf Regridder
             # For grids that have similar resolutions, method could be changed
             # to 'nearest_s2d', which is quicker and might be sufficient....
-            regridder = xe.Regridder(var_to_int, rect_grid, 'bilinear',
+            regridder = xe.Regridder(var_to_int, rect_grid,
+                                     method=int_method,
+                                     extrap_method=ext_method,
                                      weights=weights)
             print('Regridding ' + str(var))
             var_int = regridder(var_to_int)
@@ -318,7 +333,9 @@ def horizontal(data, metrics, int_param, weights=None):
             # Interpolate on regular grid using the xesmf Regridder
             # For grids that have similar resolutions, method could be changed
             # to 'nearest_s2d', which is quicker and might be sufficient....
-            regridder = xe.Regridder(mask_to_int, rect_grid, 'bilinear',
+            regridder = xe.Regridder(var_to_int, rect_grid,
+                                     method=int_method,
+                                     extrap_method=ext_method,
                                      weights=weights)
             print('Regridding ' + str(mask))
             mask_int = regridder(mask_to_int)
@@ -389,6 +406,8 @@ def create_rect_grid(int_param):
                          # degrees or m
             'res': 1./10., # resolution of the regular grid to interpolate to
                            # only used when 'grid' == 'latlon'
+            'int_method': 'conservative', # interpolation method
+            'ext_method': 'nearest_s2d', # extrapolation method
             'vars_to_interpolate': ['var1', 'var2', ...],
             'mask_to_interpolate': ['mask1', 'mask2', ...]
             }
@@ -458,6 +477,8 @@ def create_empty_ds(data, int_param, lon, lat, t):
                          # degrees or m
             'res': 1./10., # resolution of the regular grid to interpolate to
                            # only used when 'grid' == 'latlon'
+            'int_method': 'conservative', # interpolation method
+            'ext_method': 'nearest_s2d', # extrapolation method
             'vars_to_interpolate': ['var1', 'var2', ...],
             'mask_to_interpolate': ['mask1', 'mask2', ...]
             }
@@ -664,6 +685,8 @@ def spatial_filter(data_int, int_param):
                          # degrees or m
             'res': 1./10., # resolution of the regular grid to interpolate to
                            # only used when 'grid' == 'latlon'
+            'int_method': 'conservative', # interpolation method
+            'ext_method': 'nearest_s2d', # extrapolation method
             'vars_to_interpolate': ['var1', 'var2', ...],
             'mask_to_interpolate': ['mask1', 'mask2', ...],
             'vars_to_filter': ['var1', 'var2', ...], # variables to apply a
