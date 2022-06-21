@@ -275,6 +275,8 @@ def horizontal(data, metrics, int_param, weights=None):
             var_to_int = var_to_int.expand_dims({'bounds': 4})
             var_to_int = var_to_int.assign_coords({lon_b: data[lon_b],
                                                    lat_b: data[lat_b]})
+            var_to_int[lon].attrs = {'bounds': lon_b}
+            var_to_int[lat].attrs = {'bounds': lat_b}
             var_to_int = rename_dims(var_to_int, int_param)
         # Make sure the longitude is monotonically increasing for the
         # interpolation in case we have a latlon grid
@@ -619,20 +621,24 @@ def rename_dims(var_to_int, int_param):
                                                 lon_b: 'lon_bounds',
                                                 lat_rename: 'lat',
                                                 lat_b: 'lat_bounds',
-                                                z_rename: 'z'})
+                                                z_rename: 'z'},
+                                                keep_attrs=True)
         else:
             var_to_int_out = var_to_int.rename({lon_rename: 'lon',
                                                 lon_b: 'lon_bounds',
                                                 lat_rename: 'lat',
-                                                lat_b: 'lat_bounds'})
+                                                lat_b: 'lat_bounds'},
+                                                keep_attrs=True)
     elif int_param['model'] == 'MITgcm':
         if ('Z' in var_to_int.dims or 'Zl' in var_to_int.dims):
             var_to_int_out = var_to_int.rename({lon_rename: 'lon',
                                                 lat_rename: 'lat',
-                                                z_rename: 'z'})
+                                                z_rename: 'z'},
+                                                keep_attrs=True)
         else:
             var_to_int_out = var_to_int.rename({lon_rename: 'lon',
-                                                lat_rename: 'lat'})
+                                                lat_rename: 'lat'},
+                                                keep_attrs=True)
     if 't' in var_to_int.dims:
         var_to_int_out = var_to_int_out.rename({'t': 'time'})
     return var_to_int_out
