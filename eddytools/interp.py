@@ -274,16 +274,16 @@ def horizontal(data, metrics, int_param, weights=None):
             lat_b = lat + '_b'
             if 'x_c' in var_to_int.dims:
                 var_to_int = var_to_int.expand_dims({'x_c_b':
-                                                     len(dataX['x_c_b'])})
+                                                     len(data['x_c_b'])})
             elif 'x_r' in var_to_int.dims:
                 var_to_int = var_to_int.expand_dims({'x_r_b':
-                                                     len(dataX['x_r_b'])})
+                                                     len(data['x_r_b'])})
             if 'y_c' in var_to_int.dims:
                 var_to_int = var_to_int.expand_dims({'y_c_b':
-                                                     len(dataX['y_c_b'])})
+                                                     len(data['y_c_b'])})
             elif 'y_r' in var_to_int.dims:
                 var_to_int = var_to_int.expand_dims({'y_r_b':
-                                                     len(dataX['y_r_b'])})
+                                                     len(data['y_r_b'])})
             var_to_int = var_to_int.assign_coords({lon_b: data[lon_b],
                                                    lat_b: data[lat_b]})
             var_to_int = rename_dims(var_to_int, int_param)
