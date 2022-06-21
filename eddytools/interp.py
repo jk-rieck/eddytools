@@ -51,8 +51,6 @@ def horizontal(data, metrics, int_param, weights=None):
                          # degrees or m
             'res': 1./10., # resolution of the regular grid to interpolate to
                            # only used when 'grid' == 'latlon'
-            'int_method': 'conservative', # interpolation method
-            'ext_method': 'nearest_s2d', # extrapolation method
             'vars_to_interpolate': ['var1', 'var2', ...],
             'mask_to_interpolate': ['mask1', 'mask2', ...]
             }
@@ -71,17 +69,6 @@ def horizontal(data, metrics, int_param, weights=None):
     m = False
     o = False
     regridder = None
-    # Define interpolation and extrapolation methods
-    try:
-        int_method = int_param['int_method']
-    except:
-        int_method = None
-    if int_method == None:
-        int_method = 'conservative'
-    try:
-        ext_method = int_param['ext_method']
-    except:
-        ext_method = None
     # Check if `model` is either 'MITgcm' or 'ORCA' and which grid it uses
     if (int_param['model'] == 'MITgcm'):
         if int_param['grid'] == 'latlon':
@@ -261,7 +248,7 @@ def horizontal(data, metrics, int_param, weights=None):
         # Define how longitude and latitude coordinates are called in the
         # original dataset to rename them later
         if o:
-            var_to_int = rename_dims(var_to_int, int_param)
+            var_to_int = rename_dims(var_to_int)
         # Make sure the longitude is monotonically increasing for the
         # interpolation in case we have a latlon grid
         if latlon:
@@ -271,8 +258,7 @@ def horizontal(data, metrics, int_param, weights=None):
             # For grids that have similar resolutions, method could be changed
             # to 'nearest_s2d', which is quicker and might be sufficient....
             regridder = xe.Regridder(var_to_int, rect_grid,
-                                     method=int_method,
-                                     extrap_method=ext_method,
+                                     method='nearest_s2d',
                                      weights=weights)
             print('Regridding ' + str(var))
             var_int = regridder(var_to_int)
@@ -298,7 +284,7 @@ def horizontal(data, metrics, int_param, weights=None):
             except:
                 pass
             if m:
-                var_to_int = rename_dims(var_to_int, int_param)
+                var_to_int = rename_dims(var_to_int)
                 var_int = var_to_int.sel(lon=slice(lon[0], lon[-1]),
                                     lat=slice(lat[0], lat[-1]))
             elif o:
@@ -324,7 +310,7 @@ def horizontal(data, metrics, int_param, weights=None):
         # Define how longitude and latitude coordinates are called in the
         # original dataset to rename them later
         if o:
-            mask_to_int = rename_dims(mask_to_int, int_param)
+            mask_to_int = rename_dims(mask_to_int)
         # Make sure the longitude is monotonically increasing for the
         # interpolation
         if latlon:
@@ -334,8 +320,7 @@ def horizontal(data, metrics, int_param, weights=None):
             # For grids that have similar resolutions, method could be changed
             # to 'nearest_s2d', which is quicker and might be sufficient....
             regridder = xe.Regridder(var_to_int, rect_grid,
-                                     method=int_method,
-                                     extrap_method=ext_method,
+                                     method='nearest_s2d',
                                      weights=weights)
             print('Regridding ' + str(mask))
             mask_int = regridder(mask_to_int)
@@ -356,7 +341,7 @@ def horizontal(data, metrics, int_param, weights=None):
             except:
                 pass
             if m:
-                mask_to_int = rename_dims(mask_to_int, int_param)
+                mask_to_int = rename_dims(mask_to_int)
                 mask_int = mask_to_int.sel(lon=slice(lon[0], lon[-1]),
                                            lat=slice(lat[0], lat[-1]))
             elif o:
@@ -477,8 +462,6 @@ def create_empty_ds(data, int_param, lon, lat, t):
                          # degrees or m
             'res': 1./10., # resolution of the regular grid to interpolate to
                            # only used when 'grid' == 'latlon'
-            'int_method': 'conservative', # interpolation method
-            'ext_method': 'nearest_s2d', # extrapolation method
             'vars_to_interpolate': ['var1', 'var2', ...],
             'mask_to_interpolate': ['mask1', 'mask2', ...]
             }
@@ -530,7 +513,7 @@ def create_empty_ds(data, int_param, lon, lat, t):
     return data_int
 
 
-def rename_dims(var_to_int, int_param):
+def rename_dims(var_to_int):
     '''Rename dimensions of `var_to_int` so they are compatible with the
     grid that we want to interpolate to.
 
@@ -549,23 +532,15 @@ def rename_dims(var_to_int, int_param):
         if 'llon_cc' in var_to_int.coords:
             lon_rename = 'llon_cc'
             lat_rename = 'llat_cc'
-            lon_b = 'llon_cc_b'
-            lat_b = 'llat_cc_b'
         elif 'llon_cr' in var_to_int.coords:
             lon_rename = 'llon_cr'
             lat_rename = 'llat_cr'
-            lon_b = 'llon_cr_b'
-            lat_b = 'llat_cr_b'
         elif 'llon_rc' in var_to_int.coords:
             lon_rename = 'llon_rc'
             lat_rename = 'llat_rc'
-            lon_b = 'llon_rc_b'
-            lat_b = 'llat_rc_b'
         elif 'llon_rr' in var_to_int.coords:
             lon_rename = 'llon_rr'
             lat_rename = 'llat_rr'
-            lon_b = 'llon_rr_b'
-            lat_b = 'llat_rr_b'
         else:
             raise ValueError('No valid coordinates have been found.'
                              + ' Data must be compatible with xgcm!')
@@ -602,15 +577,11 @@ def rename_dims(var_to_int, int_param):
     if int_param['model'] == 'ORCA':
         if ('z_c' in var_to_int.dims or 'z_l' in var_to_int.dims):
             var_to_int_out = var_to_int.rename({lon_rename: 'lon',
-                                                lon_b: 'lon_b',
                                                 lat_rename: 'lat',
-                                                lat_b: 'lat_b',
                                                 z_rename: 'z'})
         else:
             var_to_int_out = var_to_int.rename({lon_rename: 'lon',
-                                                lon_b: 'lon_b',
-                                                lat_rename: 'lat',
-                                                lat_b: 'lat_b'})
+                                                lat_rename: 'lat'})
     elif int_param['model'] == 'MITgcm':
         if ('Z' in var_to_int.dims or 'Zl' in var_to_int.dims):
             var_to_int_out = var_to_int.rename({lon_rename: 'lon',
@@ -712,8 +683,6 @@ def spatial_filter(data_int, int_param):
                          # degrees or m
             'res': 1./10., # resolution of the regular grid to interpolate to
                            # only used when 'grid' == 'latlon'
-            'int_method': 'conservative', # interpolation method
-            'ext_method': 'nearest_s2d', # extrapolation method
             'vars_to_interpolate': ['var1', 'var2', ...],
             'mask_to_interpolate': ['mask1', 'mask2', ...],
             'vars_to_filter': ['var1', 'var2', ...], # variables to apply a
