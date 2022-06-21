@@ -261,6 +261,31 @@ def horizontal(data, metrics, int_param, weights=None):
         # Define how longitude and latitude coordinates are called in the
         # original dataset to rename them later
         if o:
+            if llon_cc in var_to_int.coords:
+                lon = llon_cc
+            elif llon_cr in var_to_int.coords:
+                lon = llon_cr
+            elif llon_rc in var_to_int.coords:
+                lon = llon_rc
+            elif llon_rr in var_to_int.coords:
+                lon = llon_rr
+            lon_b = lon + '_b'
+            lat = 'llat' + lon[4::]
+            lat_b = lat + '_b'
+            if 'x_c' in var_to_int.dims:
+                var_to_int = var_to_int.expand_dims({'x_c_b':
+                                                     len(dataX['x_c_b'])})
+            elif 'x_r' in var_to_int.dims:
+                var_to_int = var_to_int.expand_dims({'x_r_b':
+                                                     len(dataX['x_r_b'])})
+            if 'y_c' in var_to_int.dims:
+                var_to_int = var_to_int.expand_dims({'y_c_b':
+                                                     len(dataX['y_c_b'])})
+            elif 'y_r' in var_to_int.dims:
+                var_to_int = var_to_int.expand_dims({'y_r_b':
+                                                     len(dataX['y_r_b'])})
+            var_to_int = var_to_int.assign_coords({lon_b: data[lon_b],
+                                                   lat_b: data[lat_b]})
             var_to_int = rename_dims(var_to_int, int_param)
         # Make sure the longitude is monotonically increasing for the
         # interpolation in case we have a latlon grid
