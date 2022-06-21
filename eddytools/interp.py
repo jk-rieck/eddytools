@@ -261,7 +261,7 @@ def horizontal(data, metrics, int_param, weights=None):
         # Define how longitude and latitude coordinates are called in the
         # original dataset to rename them later
         if o:
-            var_to_int = rename_dims(var_to_int)
+            var_to_int = rename_dims(var_to_int, int_param)
         # Make sure the longitude is monotonically increasing for the
         # interpolation in case we have a latlon grid
         if latlon:
@@ -298,7 +298,7 @@ def horizontal(data, metrics, int_param, weights=None):
             except:
                 pass
             if m:
-                var_to_int = rename_dims(var_to_int)
+                var_to_int = rename_dims(var_to_int, int_param)
                 var_int = var_to_int.sel(lon=slice(lon[0], lon[-1]),
                                     lat=slice(lat[0], lat[-1]))
             elif o:
@@ -324,7 +324,7 @@ def horizontal(data, metrics, int_param, weights=None):
         # Define how longitude and latitude coordinates are called in the
         # original dataset to rename them later
         if o:
-            mask_to_int = rename_dims(mask_to_int)
+            mask_to_int = rename_dims(mask_to_int, int_param)
         # Make sure the longitude is monotonically increasing for the
         # interpolation
         if latlon:
@@ -356,7 +356,7 @@ def horizontal(data, metrics, int_param, weights=None):
             except:
                 pass
             if m:
-                mask_to_int = rename_dims(mask_to_int)
+                mask_to_int = rename_dims(mask_to_int, int_param)
                 mask_int = mask_to_int.sel(lon=slice(lon[0], lon[-1]),
                                            lat=slice(lat[0], lat[-1]))
             elif o:
