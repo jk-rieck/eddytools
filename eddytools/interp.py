@@ -269,21 +269,10 @@ def horizontal(data, metrics, int_param, weights=None):
                 lon = llon_rc
             elif llon_rr in var_to_int.coords:
                 lon = llon_rr
-            lon_b = lon + '_b'
+            lon_b = lon + '_bounds'
             lat = 'llat' + lon[4::]
-            lat_b = lat + '_b'
-            if 'x_c' in var_to_int.dims:
-                var_to_int = var_to_int.expand_dims({'x_c_b':
-                                                     len(data['x_c_b'])})
-            elif 'x_r' in var_to_int.dims:
-                var_to_int = var_to_int.expand_dims({'x_r_b':
-                                                     len(data['x_r_b'])})
-            if 'y_c' in var_to_int.dims:
-                var_to_int = var_to_int.expand_dims({'y_c_b':
-                                                     len(data['y_c_b'])})
-            elif 'y_r' in var_to_int.dims:
-                var_to_int = var_to_int.expand_dims({'y_r_b':
-                                                     len(data['y_r_b'])})
+            lat_b = lat + '_bounds'
+            var_to_int = var_to_int.expand_dims({'bounds': 4})
             var_to_int = var_to_int.assign_coords({lon_b: data[lon_b],
                                                    lat_b: data[lat_b]})
             var_to_int = rename_dims(var_to_int, int_param)
@@ -574,23 +563,23 @@ def rename_dims(var_to_int, int_param):
         if 'llon_cc' in var_to_int.coords:
             lon_rename = 'llon_cc'
             lat_rename = 'llat_cc'
-            lon_b = 'llon_cc_b'
-            lat_b = 'llat_cc_b'
+            lon_b = 'llon_cc_bounds'
+            lat_b = 'llat_cc_bounds'
         elif 'llon_cr' in var_to_int.coords:
             lon_rename = 'llon_cr'
             lat_rename = 'llat_cr'
-            lon_b = 'llon_cr_b'
-            lat_b = 'llat_cr_b'
+            lon_b = 'llon_cr_bounds'
+            lat_b = 'llat_cr_bounds'
         elif 'llon_rc' in var_to_int.coords:
             lon_rename = 'llon_rc'
             lat_rename = 'llat_rc'
-            lon_b = 'llon_rc_b'
-            lat_b = 'llat_rc_b'
+            lon_b = 'llon_rc_bounds'
+            lat_b = 'llat_rc_bounds'
         elif 'llon_rr' in var_to_int.coords:
             lon_rename = 'llon_rr'
             lat_rename = 'llat_rr'
-            lon_b = 'llon_rr_b'
-            lat_b = 'llat_rr_b'
+            lon_b = 'llon_rr_bounds'
+            lat_b = 'llat_rr_bounds'
         else:
             raise ValueError('No valid coordinates have been found.'
                              + ' Data must be compatible with xgcm!')
@@ -627,15 +616,15 @@ def rename_dims(var_to_int, int_param):
     if int_param['model'] == 'ORCA':
         if ('z_c' in var_to_int.dims or 'z_l' in var_to_int.dims):
             var_to_int_out = var_to_int.rename({lon_rename: 'lon',
-                                                lon_b: 'lon_b',
+                                                lon_b: 'lon_bounds',
                                                 lat_rename: 'lat',
-                                                lat_b: 'lat_b',
+                                                lat_b: 'lat_bounds',
                                                 z_rename: 'z'})
         else:
             var_to_int_out = var_to_int.rename({lon_rename: 'lon',
-                                                lon_b: 'lon_b',
+                                                lon_b: 'lon_bounds',
                                                 lat_rename: 'lat',
-                                                lat_b: 'lat_b'})
+                                                lat_b: 'lat_bounds'})
     elif int_param['model'] == 'MITgcm':
         if ('Z' in var_to_int.dims or 'Zl' in var_to_int.dims):
             var_to_int_out = var_to_int.rename({lon_rename: 'lon',
