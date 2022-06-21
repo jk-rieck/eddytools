@@ -248,7 +248,7 @@ def horizontal(data, metrics, int_param, weights=None):
         # Define how longitude and latitude coordinates are called in the
         # original dataset to rename them later
         if o:
-            var_to_int = rename_dims(var_to_int)
+            var_to_int = rename_dims(var_to_int, int_param)
         # Make sure the longitude is monotonically increasing for the
         # interpolation in case we have a latlon grid
         if latlon:
@@ -284,7 +284,7 @@ def horizontal(data, metrics, int_param, weights=None):
             except:
                 pass
             if m:
-                var_to_int = rename_dims(var_to_int)
+                var_to_int = rename_dims(var_to_int, int_param)
                 var_int = var_to_int.sel(lon=slice(lon[0], lon[-1]),
                                     lat=slice(lat[0], lat[-1]))
             elif o:
@@ -310,7 +310,7 @@ def horizontal(data, metrics, int_param, weights=None):
         # Define how longitude and latitude coordinates are called in the
         # original dataset to rename them later
         if o:
-            mask_to_int = rename_dims(mask_to_int)
+            mask_to_int = rename_dims(mask_to_int, int_param)
         # Make sure the longitude is monotonically increasing for the
         # interpolation
         if latlon:
@@ -341,7 +341,7 @@ def horizontal(data, metrics, int_param, weights=None):
             except:
                 pass
             if m:
-                mask_to_int = rename_dims(mask_to_int)
+                mask_to_int = rename_dims(mask_to_int, int_param)
                 mask_int = mask_to_int.sel(lon=slice(lon[0], lon[-1]),
                                            lat=slice(lat[0], lat[-1]))
             elif o:
@@ -391,8 +391,6 @@ def create_rect_grid(int_param):
                          # degrees or m
             'res': 1./10., # resolution of the regular grid to interpolate to
                            # only used when 'grid' == 'latlon'
-            'int_method': 'conservative', # interpolation method
-            'ext_method': 'nearest_s2d', # extrapolation method
             'vars_to_interpolate': ['var1', 'var2', ...],
             'mask_to_interpolate': ['mask1', 'mask2', ...]
             }
@@ -513,7 +511,7 @@ def create_empty_ds(data, int_param, lon, lat, t):
     return data_int
 
 
-def rename_dims(var_to_int):
+def rename_dims(var_to_int, int_param):
     '''Rename dimensions of `var_to_int` so they are compatible with the
     grid that we want to interpolate to.
 
@@ -521,6 +519,30 @@ def rename_dims(var_to_int):
     ----------
     var_to_int : xarray.DataArray
         Data array with the variable that is later to be interpolated.
+    int_param : dict
+        Dictionary specifying all the parameters needed for the interpolation.
+        The parameters are
+        int_param = {
+            'model': 'MITgcm' # MITgcm or ORCA
+            'grid': 'cartesian' # cartesian or latlon
+            'start_time': 'YYYY-MM-DD', # time range start
+            'end_time': 'YYYY-MM-DD', # time range end
+            'calendar': '360_day', # calendar, must be either 360_day or
+                                   # standard
+            'lon1': -180, # minimum longitude of detection region, either in
+                          # the range (-180, 180) degrees or in m for a
+                          # cartesian grid
+            'lon2': -130, # maximum longitude of detection region, (-180, 180)
+                          # degrees or m
+            'lat1': -55, # minimum latitude of detection region, (-90, 90)
+                         # degrees or m
+            'lat2': -30, # maximum latitude of detection region, (-90, 90)
+                         # degrees or m
+            'res': 1./10., # resolution of the regular grid to interpolate to
+                           # only used when 'grid' == 'latlon'
+            'vars_to_interpolate': ['var1', 'var2', ...],
+            'mask_to_interpolate': ['mask1', 'mask2', ...]
+            }
 
     Returns
     -------
