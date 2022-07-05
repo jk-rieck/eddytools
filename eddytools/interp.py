@@ -239,10 +239,10 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
                       '`lat1`, `lat2` have no effect!')
                 regrid = False
                 regrid_avoided = True
-                lat = dataX.llat_rr
-                lon = dataX.llon_rr
-                y = dataX.y_r
-                x = dataX.x_r
+                lat = data.llat_rr
+                lon = data.llon_rr
+                y = data.y_r
+                x = data.x_r
                 if (('z_c' in data.dims) or ('z_l' in data.dims)):
                     data_int = xr.Dataset({
                         'time': ('time', data[t].sel({t:
