@@ -748,8 +748,8 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False,
     if det_param['grid'] == 'latlon':
         data, det_param = monotonic_lon(data, det_param)
     # Masking shallow regions and cut out the region specified in `det_param`
-    OW = maskandcut(data, ow_var, det_param)
-    vort = maskandcut(data, vort_var, det_param)
+    OW = maskandcut(data, ow_var, det_param, regrid_avoided=regrid_avoided)
+    vort = maskandcut(data, vort_var, det_param, regrid_avoided=regrid_avoided)
     OW_thr_name = det_param['OW_thr_name']
     # Define the names of the grid cell sizes depending on the model
     if det_param['model'] == 'MITgcm':
@@ -758,11 +758,12 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False,
     if det_param['model'] == 'ORCA':
         e1f_name = 'e1f'
         e2f_name = 'e2f'
-    e1f = maskandcut(data, e1f_name, det_param)
-    e2f = maskandcut(data, e2f_name, det_param)
+    e1f = maskandcut(data, e1f_name, det_param, regrid_avoided=regrid_avoided)
+    e2f = maskandcut(data, e2f_name, det_param, regrid_avoided=regrid_avoided)
     if len(np.shape(data[OW_thr_name])) > 1:
         # If the Okubo-Weiss threshold is 2D, use `maskandcutOW` masking etc.
-        OW_thr = maskandcut(data, OW_thr_name, det_param)
+        OW_thr = maskandcut(data, OW_thr_name, det_param,
+                            regrid_avoided=regrid_avoided)
         OW_thr = OW_thr * (det_param['OW_thr_factor'])
     else:
         # Else just use scalar from `det_param`
