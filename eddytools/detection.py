@@ -355,8 +355,8 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             del eddi[e]
             continue
         min_width = int(np.floor(np.sqrt(region_Npix / np.pi)))
-        X_cen = int(np.floor(np.mean(index[1])))
-        Y_cen = int(np.floor(np.mean(index[0])))
+        X_cen = int(np.around(np.mean(index[1])))
+        Y_cen = int(np.around(np.mean(index[0])))
         if len(np.shape(data[det_param['OW_thr_name']])) > 1:
             peak_thr = OW_thr.values[interior].mean()
         else:
@@ -372,21 +372,21 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
                                                          X_cen], peak_thr)
             Xpix_cen1 = get_width(OW.isel(time=t).values[Y_cen, iimin:iimax],
                                                          peak_thr)
-            Xpix_cen2 = get_width(OW.isel(time=t).values[Y_cen, 
-                                                         iimax-1:iimin2:-1], 
+            Xpix_cen2 = get_width(OW.isel(time=t).values[Y_cen,
+                                                         iimax-1:iimin2:-1],
                                   peak_thr)
         else:
             Ypix_cen1 = np.sum(index[1] == X_cen)
             Ypix_cen2 = np.sum(index[1] == X_cen)
             Xpix_cen1 = np.sum(index[0] == Y_cen)
             Xpix_cen2 = np.sum(index[0] == Y_cen)
-        eddy_not_too_thin = (((Xpix_cen1 > min_width) 
+        eddy_not_too_thin = (((Xpix_cen1 > min_width)
                             & (Ypix_cen1 > min_width)) |
-                             ((Xpix_cen2 > min_width) 
+                             ((Xpix_cen2 > min_width)
                             & (Ypix_cen2 > min_width)) |
-                             ((Xpix_cen2 > min_width) 
+                             ((Xpix_cen2 > min_width)
                             & (Ypix_cen1 > min_width)) |
-                             ((Xpix_cen1 > min_width) 
+                             ((Xpix_cen1 > min_width)
                             & (Ypix_cen2 > min_width)))
         # check for local extrema
         has_internal_ext = (OW.isel(time=t).values[interior].min()
