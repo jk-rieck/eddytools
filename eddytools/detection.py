@@ -1,10 +1,8 @@
 '''detection
-
 Collection of functions needed for the detection of mesoscale eddies
 based on the Okubo-Weiss parameter. The data is assumed to have been
 interpolated with the `interp.py` module of this package or at least
 needs to have the same structure.
-
 '''
 
 import numpy as np
@@ -17,11 +15,10 @@ try:
 except:
     print("Working without dask bags.")
 
-def maskandcut(data, var, det_param):
+def maskandcut(data, var, det_param, regrid_avoided=False):
     ''' Mask regions in the dataset where the ocean is shallower than a
     depth threshold and only select specified horizontal and temporal
     extent.
-
     Parameters
     ----------
     data : xarray.DataSet
@@ -60,7 +57,9 @@ def maskandcut(data, var, det_param):
             'Npix_min': 15, # min. num. grid cells to be considered as eddy
             'Npix_max': 1000 # max. num. grid cells to be considered as eddy
             }
-
+    regrid_avoided : bool
+        If True indicates that regridding has been avoided during the
+        interpolation and the data has 2D coordinates. Default is False.
     Returns
     -------
     data_masked : xarray.DataArray
@@ -75,22 +74,30 @@ def maskandcut(data, var, det_param):
     # Mask the areas where the ocean is shallower than min_dep and cut out
     # longitude, latitude (and time if time is a dimension of the variable)
     if 'time' in data[var].dims:
-        data_masked = data[var].where(
-            data[bathy] >= det_param['min_dep']).sel(
-                lat=slice(det_param['lat1'], det_param['lat2']),
-                lon=slice(det_param['lon1'], det_param['lon2']),
-                time=slice(det_param['start_time'], det_param['end_time']))
+        if regrid_avoided:
+            data_masked = data[var].where(
+                data[bathy] >= det_param['min_dep']).sel(
+                    time=slice(det_param['start_time'], det_param['end_time']))
+        else:
+            data_masked = data[var].where(
+                data[bathy] >= det_param['min_dep']).sel(
+                    lat=slice(det_param['lat1'], det_param['lat2']),
+                    lon=slice(det_param['lon1'], det_param['lon2']),
+                    time=slice(det_param['start_time'], det_param['end_time']))
     else:
-        data_masked = data[var].where(
-            data[bathy] >= det_param['min_dep']).sel(
-                lat=slice(det_param['lat1'], det_param['lat2']),
-                lon=slice(det_param['lon1'], det_param['lon2']))
+        if regrid_avoided:
+            data_masked = data[var].where(
+                data[bathy] >= det_param['min_dep'])
+        else:
+            data_masked = data[var].where(
+                data[bathy] >= det_param['min_dep']).sel(
+                    lat=slice(det_param['lat1'], det_param['lat2']),
+                    lon=slice(det_param['lon1'], det_param['lon2']))
     return data_masked
 
 
 def monotonic_lon(var, det_param):
     '''Make sure longitude is monotonically increasing in `var`.
-
     Parameters
     ----------
     var : xarray.DataArray
@@ -125,7 +132,6 @@ def monotonic_lon(var, det_param):
             'Npix_min': 15, # min. num. grid cells to be considered as eddy
             'Npix_max': 1000 # max. num. grid cells to be considered as eddy
             }
-
     Returns
     -------
     var : xarray.DataArray
@@ -134,27 +140,25 @@ def monotonic_lon(var, det_param):
         Same as input `det_param` but with modified values for lon1 and lon2
     '''
     # Make sure the longitude is monotonically increasing for the interpolation
-    if var['lon'][0] > var['lon'][-1]:
+    if (var['lon'][0] > var['lon'][-1]).any():
         lon_mod = var['lon']\
             .where(var['lon']
-                   >= var['lon'][0].values,
+                   >= var['lon'][0].max().values,
                    other=var['lon'] + 360)
         var = var.assign_coords({'lon': lon_mod})
-        if det_param['lon1'] < lon_mod[0]:
+        if (det_param['lon1'] < lon_mod[0]).any():
             det_param['lon1'] = det_param['lon1'] + 360
-        if det_param['lon2'] < lon_mod['lon'][0]:
+        if (det_param['lon2'] < lon_mod['lon'][0]).any():
             det_param['lon2'] = det_param['lon2'] + 360
     return var, det_param
 
 
 def restore_lon(data):
     '''Make sure longitude is between -180 and 180 in `data`.
-
     Parameters
     ----------
     data : xarray.DataArray
         Data array with the variable that is later to be interpolated.
-
     Returns
     -------
     data : xarray.DataArray
@@ -168,12 +172,10 @@ def restore_lon(data):
 
 def get_indeces(data):
     '''Retrieve indeces of regions detected with ndimage.label
-
     Parameters
     ----------
     data : ndimage.label
         Return of ndimage.label()
-
     Returns
     -------
         Indeces of regions
@@ -189,7 +191,6 @@ def distance_matrix(lons, lats):
     d = EARTH_RADIUS*Arccos(c)
     where EARTH_RADIUS is in km and the angles are in radians.
     Source: http://mathforum.org/library/drmath/view/54680.html
-
     Usage:
         d = distance_matrix(lons,lats)
     Input:
@@ -220,14 +221,12 @@ def distance_matrix(lons, lats):
 
 def get_width(data, thr):
     '''Calculate the width of an eddy in grid cell space
-
     Parameters
     ----------
     data : array
         1D array with values of the OW parameter across the detected feature.
     thr : float
         The OW-threshold below which an area is considered and eddy.
-
     Returns
     -------
     width : int
@@ -238,9 +237,9 @@ def get_width(data, thr):
     return np.sum(data[start:start+end] <= thr)
 
 
-def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
+def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
+                   regrid_avoided=False):
     ''' Core function for the detection of eddies, used by detect_OW().
-
     Parameters
     ----------
     det_param : dict
@@ -290,7 +289,9 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
     e2f : xarray.DataArray
         Xarray DataArray with the grid cell size in y direction, used to
         calculate the area of the eddies.
-
+    regrid_avoided : bool
+        If True indicates that regridding has been avoided during the
+        interpolation and the data has 2D coordinates. Default is False.
     Returns
     -------
     eddies : dict
@@ -318,8 +319,12 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
                                        < OW_thr).astype(int))
     region_index = get_indeces(regions)
     #
-    len_OW_lat = len(OW['lat'])
-    len_OW_lon = len(OW['lon'])
+    if regrid_avoided:
+        len_OW_lat = len(OW['y'])
+        len_OW_lon = len(OW['x'])
+    else:
+        len_OW_lat = len(OW['lat'])
+        len_OW_lon = len(OW['lon'])
     # length of 1 degree of latitude [km]
     e = 0
     for iregion in list(range(nregions - 1)):
@@ -355,8 +360,8 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             del eddi[e]
             continue
         min_width = int(np.floor(np.sqrt(region_Npix / np.pi)))
-        X_cen = int(np.around(np.mean(index[1])))
-        Y_cen = int(np.around(np.mean(index[0])))
+        X_cen = int(np.floor(np.mean(index[1])))
+        Y_cen = int(np.floor(np.mean(index[0])))
         if len(np.shape(data[det_param['OW_thr_name']])) > 1:
             peak_thr = OW_thr.values[interior].mean()
         else:
@@ -398,16 +403,26 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
             eddi[e]['time'] = OW.isel(time=t)['time'].values
             # find centre of mass of eddy
             index_eddy = (index[0] - ijmin, index[1] - iimin)
-            tmp = OW.isel(time=t, lat=slice(ijmin, ijmax),
-                          lon=slice(iimin, iimax)).values.copy()
+            if regrid_avoided:
+                tmp = OW.isel(time=t, y=slice(ijmin, ijmax),
+                              x=slice(iimin, iimax)).values.copy()
+            else:
+                tmp = OW.isel(time=t, lat=slice(ijmin, ijmax),
+                              lon=slice(iimin, iimax)).values.copy()
             eddy_object_with_mass = np.zeros_like(tmp)
             eddy_object_with_mass[index_eddy] = tmp[index_eddy]
             j_cen, i_cen = ndimage.center_of_mass(eddy_object_with_mass)
             j_cen, i_cen = j_cen + ijmin, i_cen + iimin
-            lon_eddies = np.interp(i_cen, range(0, len(OW['lon'])),
-                                   OW['lon'].values)
-            lat_eddies = np.interp(j_cen, range(0, len(OW['lat'])),
-                                   OW['lat'].values)
+            if regrid_avoided:
+                lon_eddies = np.interp(i_cen, range(0, len_OW_lon),
+                                OW['lon'][int(np.floor(j_cen)), :].values)
+                lat_eddies = np.interp(j_cen, range(0, len_OW_lat),
+                                OW['lat'][:, int(np.floor(i_cen))].values)
+            else:
+                lon_eddies = np.interp(i_cen, range(0, len(OW['lon'])),
+                                OW['lon'].values)
+                lat_eddies = np.interp(j_cen, range(0, len(OW['lat'])),
+                                OW['lat'].values)
             if lon_eddies > 180:
                 eddi[e]['lon'] = np.array([lon_eddies]) - 360.
             elif lon_eddies < -180:
@@ -424,10 +439,16 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f):
                        - vort.isel(time=t).values[interior].min())
             eddi[e]['amp'] = np.array([amp])
             # store all eddy indices
-            j_min = (data.lat.where(data.lat == OW.lat.min(), other=0)
-                     ** 2).argmax().values
-            i_min = (data.lon.where(data.lon == OW.lon.min(), other=0)
-                     ** 2).argmax().values
+            if regrid_avoided:
+                j_min = (data.y.where(data.y == OW.y.min(), other=0)
+                         ** 2).argmax().values
+                i_min = (data.x.where(data.x == OW.x.min(), other=0)
+                         ** 2).argmax().values
+            else:
+                j_min = (data.lat.where(data.lat == OW.lat.min(), other=0)
+                         ** 2).argmax().values
+                i_min = (data.lon.where(data.lon == OW.lon.min(), other=0)
+                         ** 2).argmax().values
             eddi[e]['eddy_j'] = index[0] + j_min
             eddi[e]['eddy_i'] = index[1] + i_min
             # assign (and calculated) area, and scale of eddies
@@ -473,15 +494,11 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
     3) There is at least one local SSH maximum (minimum for cyclonic)
     4) The amplitude exceeds a given threshold
     5) The maximum distance between two points of an eddy is below a given value
-
     Npix_min, Npix_max, amp_thresh, d_thresh specify the constants
     used by the eddy detection algorithm (see Chelton paper for
     more details)
-
     Input:
         data: 2D filtered SSH field
-
-
     Output:
         eddies: dictionary containing the following variables
             lon_cen: longitude coordinate of detected eddy centers
@@ -615,9 +632,9 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
     return eddi
 
 
-def detect_OW(data, det_param, ow_var, vort_var, use_bags=False):
+def detect_OW(data, det_param, ow_var, vort_var, use_bags=False,
+              regrid_avoided=False):
     ''' Detect eddies based on specified Okubo-Weiss parameter.
-
     Parameters
     ----------
     data : xarray.DataSet
@@ -658,7 +675,9 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False):
         Name of the variable in `data` containing the Okubo-Weiss parameter.
     vort_var : str
         Name of the variable in `data` containing the vorticity field.
-
+    regrid_avoided : bool
+        If True indicates that regridding has been avoided during the
+        interpolation and the data has 2D coordinates. Default is False.
     Returns
     -------
     eddies : dict
@@ -708,8 +727,8 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False):
     if det_param['grid'] == 'latlon':
         data, det_param = monotonic_lon(data, det_param)
     # Masking shallow regions and cut out the region specified in `det_param`
-    OW = maskandcut(data, ow_var, det_param)
-    vort = maskandcut(data, vort_var, det_param)
+    OW = maskandcut(data, ow_var, det_param, regrid_avoided=regrid_avoided)
+    vort = maskandcut(data, vort_var, det_param, regrid_avoided=regrid_avoided)
     OW_thr_name = det_param['OW_thr_name']
     # Define the names of the grid cell sizes depending on the model
     if det_param['model'] == 'MITgcm':
@@ -718,11 +737,12 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False):
     if det_param['model'] == 'ORCA':
         e1f_name = 'e1f'
         e2f_name = 'e2f'
-    e1f = maskandcut(data, e1f_name, det_param)
-    e2f = maskandcut(data, e2f_name, det_param)
+    e1f = maskandcut(data, e1f_name, det_param, regrid_avoided=regrid_avoided)
+    e2f = maskandcut(data, e2f_name, det_param, regrid_avoided=regrid_avoided)
     if len(np.shape(data[OW_thr_name])) > 1:
         # If the Okubo-Weiss threshold is 2D, use `maskandcutOW` masking etc.
-        OW_thr = maskandcut(data, OW_thr_name, det_param)
+        OW_thr = maskandcut(data, OW_thr_name, det_param,
+                            regrid_avoided=regrid_avoided)
         OW_thr = OW_thr * (det_param['OW_thr_factor'])
     else:
         # Else just use scalar from `det_param`
@@ -735,7 +755,8 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False):
         print("Detecting eddies in Okubo-Weiss parameter fields")
         detection = dask_bag.map(
             lambda tt: detect_OW_core(data, det_param.copy(),
-                                      OW, vort, tt, OW_thr, e1f, e2f)
+                                      OW, vort, tt, OW_thr, e1f, e2f,
+                                      regrid_avoided=regrid_avoided)
                                  ,seeds_bag)
         eddies = detection.compute()
     else:
@@ -752,7 +773,8 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False):
                 print('detection at time step ', str(tt + 1), ' of ',
                       len(OW['time']))
             eddies[tt] = detect_OW_core(data, det_param.copy(),
-                                        OW, vort, tt, OW_thr, e1f, e2f)
+                                        OW, vort, tt, OW_thr, e1f, e2f,
+                                        regrid_avoided=regrid_avoided)
     return eddies
 
 
@@ -760,7 +782,6 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False):
     ''' Detect eddies based on SSH following Chelton 2011. Prepares the
     necessary input for detect_SSH_core that performs the actual detection.
     Parallel computation of timesteps using dask bag.
-
     Parameters
     ----------
     data : xarray.DataSet
@@ -798,7 +819,6 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False):
             }
     ssh_var : str
         Name of the variable in `data` containing the SSH.
-
     Returns
     -------
     eddies : dict

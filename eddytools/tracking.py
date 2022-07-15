@@ -145,6 +145,35 @@ def is_in_ellipse(x0, y0, dE, d, x, y):
     return elli
 
 
+def is_in_circle(x0, y0, d, x, y):
+    '''Check if point (x,y) is contained in circle with radiues d
+    around point (x0, y0)
+      (x-x0)**2 + (y-y0)**2
+      ---------------------  =  1
+              d**2
+
+    Parameters
+    ----------
+    x0 : float
+        Eddy center lon at timestep t-1.
+    y0 : float
+        Eddy center lat at timestep t-1.
+    d : float
+        Radius of circle.
+    x : array
+        Longitude vector of eddy centers at timestep t
+    y : array
+        Latitude vector of eddy centers at timestep t
+    Returns
+    -------
+    circ : boolean array
+        Boolean vector of length len(x)=len(y). True when (x,y) is
+        inside the circl
+    '''
+    circ = ((x-x0) ** 2 + (y-y0) ** 2) / d ** 2 <= 1
+    return circ
+
+
 def len_deg_lon(lat):
     '''Returns the length of one degree of longitude (at latitude
     specified) in km.
@@ -194,9 +223,12 @@ def prepare(trac_param):
                           # (-90, 90) degrees or m
             'lat2': -30, # maximum latitude of detection region, either
                           # (-90, 90) degrees or m
-            'dE': 0., # maximum distance of search ellipsis from eddy center
-                      # towards the east (if set to 0, it will be calculated
-                      # as (150. / (7. / dt)))
+            'search_dist': 0., # maximum distance of search ellipse/circle from
+                               # eddy center
+                               # if ellipse: towards the east (if set to 0, it
+                               # will be calculated as (150. / (7. / dt)))
+            'search_circle': False, # if True, search in a circle. otherwise
+                                    # use ellipse
             'eddy_scale_min': 0.75, # minimum factor by which eddy amplitude
                                     # and area can change in one timestep
             'eddy_scale_max': 1.5, # maximum factor by which eddy amplitude
@@ -230,16 +262,16 @@ def prepare(trac_param):
     # Load the contents of the file with the Rossby radius data if we are on
     # a latlon grid
     t_p = trac_param.copy()
-    if t_p['grid'] == 'latlon':
+    if ((t_p['grid'] == 'latlon') and not t_p['search_circle']):
         rossrad = load_rossrad(trac_param['ross_path'])
     else:
         rossrad = []
 
     # calculate eastern extend of search region
-    if trac_param['dE'] == 0:
-        t_p['dE'] = 150. / (7. / trac_param['dt'])  # [km]
-    elif trac_param['dE'] > 0:
-        t_p['dE'] = trac_param['dE']
+    if trac_param['search_dist'] == 0:
+        t_p['search_dist'] = 150. / (7. / trac_param['dt'])  # [km]
+    elif trac_param['search_dist'] > 0:
+        t_p['search_dist'] = trac_param['search_dist']
     else:
         print('Eastern extend of search region not properly specified')
         sys.exit()
@@ -313,9 +345,12 @@ def eddy_is_near(track, trac_param, un_items, range_un_items, rossrad):
                           # (-90, 90) degrees or m
             'lat2': -30, # maximum latitude of detection region, either
                           # (-90, 90) degrees or m
-            'dE': 0., # maximum distance of search ellipsis from eddy center
-                      # towards the east (if set to 0, it will be calculated
-                      # as (150. / (7. / dt)))
+            'search_dist': 0., # maximum distance of search ellipse/circle from
+                               # eddy center
+                               # if ellipse: towards the east (if set to 0, it
+                               # will be calculated as (150. / (7. / dt)))
+            'search_circle': False, # if True, search in a circle. otherwise
+                                    # use ellipse
             'eddy_scale_min': 0.75, # minimum factor by which eddy amplitude
                                     # and area can change in one timestep
             'eddy_scale_max': 1.5, # maximum factor by which eddy amplitude
@@ -353,25 +388,36 @@ def eddy_is_near(track, trac_param, un_items, range_un_items, rossrad):
     '''
     x0 = track['lon'][-1]  # [deg. lon] or [m]
     y0 = track['lat'][-1]  # [deg. lat] or [m]
-    if trac_param['grid'] == 'latlon':
-        d = calculate_d(trac_param['dE'], x0, y0, rossrad,
-                        trac_param['dt'])  # [km]
-        len_lon = len_deg_lon(y0)
-        dE_in_ellipse = trac_param['dE'] / len_lon
-        d_in_ellipse = d / len_lon
-    elif trac_param['grid'] == 'cartesian':
-        d = trac_param['dE']
-        dE_in_ellipse = trac_param['dE'] * 1e3
-        d_in_ellipse = d * 1e3
-    # Find all eddy centroids in search region at time tt
     tmp_lon = [un_items[i]['lon']
                for i in range_un_items]
     tmp_lat = [un_items[i]['lat']
                for i in range_un_items]
-    is_near = is_in_ellipse(x0, y0,
-                            dE_in_ellipse,
-                            d_in_ellipse,
-                            tmp_lon, tmp_lat)
+    if trac_param['grid'] == 'latlon':
+        if not trac_param['search_circle']:
+            d = calculate_d(trac_param['search_dist'], x0, y0, rossrad,
+                            trac_param['dt'])  # [km]
+            len_lon = len_deg_lon(y0)
+            dE_in_ellipse = trac_param['search_dist'] / len_lon
+            d_in_ellipse = d / len_lon
+        elif trac_param['search_circle']:
+            len_lon = len_deg_lon(y0)
+            d_in_circle = trac_param['search_dist'] / len_lon
+    elif trac_param['grid'] == 'cartesian':
+        if not trac_param['search_circle']:
+            dE_in_ellipse = trac_param['search_dist'] * 1e3
+            d_in_ellipse = dE_in_ellipse
+        elif trac_param['search_circle']:
+            d_in_circle = trac_param['search_dist'] * 1e3
+    # Find all eddy centroids in search region at time tt
+    if not trac_param['search_circle']:
+        is_near = is_in_ellipse(x0, y0,
+                                dE_in_ellipse,
+                                d_in_ellipse,
+                                tmp_lon, tmp_lat)
+    elif trac_param['search_circle']:
+        is_near = is_in_circle(x0, y0,
+                               d_in_circle,
+                               tmp_lon, tmp_lat)
     return is_near, x0, y0
 
 
@@ -404,9 +450,12 @@ def eddy_is_similar(track, trac_param, un_items, range_un_items):
                           # (-90, 90) degrees or m
             'lat2': -30, # maximum latitude of detection region, either
                           # (-90, 90) degrees or m
-            'dE': 0., # maximum distance of search ellipsis from eddy center
-                      # towards the east (if set to 0, it will be calculated
-                      # as (150. / (7. / dt)))
+            'search_dist': 0., # maximum distance of search ellipse/circle from
+                               # eddy center
+                               # if ellipse: towards the east (if set to 0, it
+                               # will be calculated as (150. / (7. / dt)))
+            'search_circle': False, # if True, search in a circle. otherwise
+                                    # use ellipse
             'eddy_scale_min': 0.75, # minimum factor by which eddy amplitude
                                     # and area can change in one timestep
             'eddy_scale_max': 1.5, # maximum factor by which eddy amplitude
@@ -504,9 +553,12 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
                           # (-90, 90) degrees or m
             'lat2': -30, # maximum latitude of detection region, either
                           # (-90, 90) degrees or m
-            'dE': 0., # maximum distance of search ellipsis from eddy center
-                      # towards the east (if set to 0, it will be calculated
-                      # as (150. / (7. / dt)))
+            'search_dist': 0., # maximum distance of search ellipse/circle from
+                               # eddy center
+                               # if ellipse: towards the east (if set to 0, it
+                               # will be calculated as (150. / (7. / dt)))
+            'search_circle': False, # if True, search in a circle. otherwise
+                                    # use ellipse
             'eddy_scale_min': 0.75, # minimum factor by which eddy amplitude
                                     # and area can change in one timestep
             'eddy_scale_max': 1.5, # maximum factor by which eddy amplitude
@@ -712,9 +764,12 @@ def track(tracking_params, in_file=True):
                           # (-90, 90) degrees or m
             'lat2': -30, # maximum latitude of detection region, either
                           # (-90, 90) degrees or m
-            'dE': 0., # maximum distance of search ellipsis from eddy center
-                      # towards the east (if set to 0, it will be calculated
-                      # as (150. / (7. / dt)))
+            'search_dist': 0., # maximum distance of search ellipse/circle from
+                               # eddy center
+                               # if ellipse: towards the east (if set to 0, it
+                               # will be calculated as (150. / (7. / dt)))
+            'search_circle': False, # if True, search in a circle. otherwise
+                                    # use ellipse
             'eddy_scale_min': 0.75, # minimum factor by which eddy amplitude
                                     # and area can change in one timestep
             'eddy_scale_max': 1.5, # maximum factor by which eddy amplitude
