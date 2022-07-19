@@ -206,11 +206,7 @@ def is_in_circle(x0, y0, d, x, y):
         inside the circl
     '''
     dist = get_distance(x0, y0, x, y)
-    if dist <= d:
-        circ = True
-    else:
-        circ = False
-    return circ
+    return np.array(dist) <= d
 
 
 def len_deg_lon(lat):
