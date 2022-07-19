@@ -125,11 +125,10 @@ def get_distance(lon1, lat1, lon2, lat2):
     R = 6371.
     dlon = np.radians(lon2) - np.radians(lon1)
     dlat = np.radians(lat2) - np.radians(lat1)
-    a = (np.sin(dlat / 2) ** 2 + np.cos(lat1)
-         * np.cos(lat2) * np.sin(dlon / 2) ** 2)
+    a = ((np.sin(dlat / 2.) ** 2.) + np.cos(lat1)
+         * np.cos(lat2) * (np.sin(dlon / 2.) ** 2.))
     c = 2 * np.arcsin(np.sqrt(a))
     return R * c
-
 
 
 def is_in_ellipse(x0, y0, dE, d, x, y):
