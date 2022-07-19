@@ -77,7 +77,7 @@ def calculate_d(dE, lon, lat, rossrad, dt):
 
     Returns
     -------
-    d : float or inr
+    d : float or int
         Extent of the search ellipsis to the west.
     '''
     if np.abs(lat) < 18:
@@ -95,6 +95,41 @@ def calculate_d(dE, lon, lat, rossrad, dt):
         d = dE
 
     return d
+
+
+def get_distance(lon1, lat1, lon2, lat2):
+    '''Get the distance in km between two points (lon1, lat1) and (lon2, lat2)
+    based on longitude and latitude.
+    We use the haversine approach which assumes the Earth is a sphere and can
+    induce errors of up to 0.5%. (That means if we look for eddies in a search
+    radius of 50 km, the actual radius could be between 49.75 km and 50.25 km.
+    Errors due to interpolation etc are probably much larger!)
+
+    Parameters
+    ----------
+    lon1 : float or int
+        Longitude of the first point.
+    lat1 : float or int
+        Latitude of the first point.
+    lon1 : float or int
+        Longitude of the first point.
+    lat1 : float or int
+        Latitude of the first point.
+
+    Returns
+    -------
+    d : float or int
+        Distance between the two points (lon1, lat1) and (lon2, lat2)
+    '''
+    # Approximate radius of the Earth in km
+    R = 6371.
+    dlon = np.radians(lon2) - np.radians(lon1)
+    dlat = np.radians(lat2) - np.radians(lat1)
+    a = (np.sin(dlat / 2) ** 2 + np.cos(lat1)
+         * np.cos(lat2) * np.sin(dlon / 2) ** 2)
+    c = 2 * np.arcsin(np.sqrt(a))
+    return R * c
+
 
 
 def is_in_ellipse(x0, y0, dE, d, x, y):
@@ -146,11 +181,8 @@ def is_in_ellipse(x0, y0, dE, d, x, y):
 
 
 def is_in_circle(x0, y0, d, x, y):
-    '''Check if point (x,y) is contained in circle with radiues d
+    '''Check if point (x,y) is contained in circle with radiues d (in km)
     around point (x0, y0)
-      (x-x0)**2 + (y-y0)**2
-      ---------------------  =  1
-              d**2
 
     Parameters
     ----------
@@ -170,7 +202,11 @@ def is_in_circle(x0, y0, d, x, y):
         Boolean vector of length len(x)=len(y). True when (x,y) is
         inside the circl
     '''
-    circ = ((x-x0) ** 2 + (y-y0) ** 2) / d ** 2 <= 1
+    dist = get_distance(x0, y0, x, y)
+    if dist <= d:
+        circ = True
+    else:
+        circ = False
     return circ
 
 
