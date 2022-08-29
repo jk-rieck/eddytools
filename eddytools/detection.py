@@ -765,7 +765,7 @@ def detect_OW(data, det_param, ow_var, vort_var, use_mp=False,
                         )
         print("Detecting eddies in Okubo-Weiss parameter fields")
         with mp.Pool(mp.cpu_count()) as p:
-            eddies = p.map(detect_OW_core, arguments)
+            eddies = p.starmap(detect_OW_core, arguments)
         p.close()
         p.join()
     else:
@@ -907,7 +907,7 @@ def detect_SSH(data, det_param, ssh_var, use_mp=False):
                         )
         print("Detecting eddies in SSH parameter fields")
         with mp.Pool(mp.cpu_count()) as p:
-            eddies = p.map(detect_SSH_core, arguments)
+            eddies = p.starmap(detect_SSH_core, arguments)
         p.close()
         p.join()
     else:
