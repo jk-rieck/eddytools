@@ -11,6 +11,10 @@ from scipy import ndimage
 from scipy.signal import find_peaks
 import cftime as cft
 import itertools
+try:
+    import multiprocessing as mp
+except:
+    print("multiprocessing not possible")
 
 def maskandcut(data, var, det_param, regrid_avoided=False):
     ''' Mask regions in the dataset where the ocean is shallower than a
