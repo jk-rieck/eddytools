@@ -919,7 +919,7 @@ def detect_SSH(data, det_param, ssh_var, use_mp=False, mp_cpu=2):
         print("Detecting eddies in SSH parameter fields")
         if mp_cpu > mp.cpu_count():
             mp_cpu = mp.cpu_count()
-        with mp.Pool(mp_cpu) as p::
+        with mp.Pool(mp_cpu) as p:
             eddies = p.starmap(detect_SSH_core, arguments)
         p.close()
         p.join()
