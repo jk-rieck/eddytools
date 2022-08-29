@@ -633,7 +633,7 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
     return eddi
 
 
-def detect_OW(data, det_param, ow_var, vort_var, use_mp=False,
+def detect_OW(data, det_param, ow_var, vort_var, use_mp=False, mp_cpu=2,
               regrid_avoided=False):
     ''' Detect eddies based on specified Okubo-Weiss parameter.
     Parameters
@@ -770,7 +770,9 @@ def detect_OW(data, det_param, ow_var, vort_var, use_mp=False,
                         itertools.repeat(regrid_avoided)
                         )
         print("Detecting eddies in Okubo-Weiss parameter fields")
-        with mp.Pool(mp.cpu_count()) as p:
+        if mp_cpu > mp.cpu_count():
+            mp_cpu = mp.cpu_count()
+        with mp.Pool(mp_cpu) as p:
             eddies = p.starmap(detect_OW_core, arguments)
         p.close()
         p.join()
@@ -793,7 +795,7 @@ def detect_OW(data, det_param, ow_var, vort_var, use_mp=False,
     return eddies
 
 
-def detect_SSH(data, det_param, ssh_var, use_mp=False):
+def detect_SSH(data, det_param, ssh_var, use_mp=False, mp_cpu=2):
     ''' Detect eddies based on SSH following Chelton 2011. Prepares the
     necessary input for detect_SSH_core that performs the actual detection.
     Parallel computation of timesteps using dask bag.
@@ -915,7 +917,9 @@ def detect_SSH(data, det_param, ssh_var, use_mp=False):
                         itertools.repeat(e2f)
                         )
         print("Detecting eddies in SSH parameter fields")
-        with mp.Pool(mp.cpu_count()) as p:
+        if mp_cpu > mp.cpu_count():
+            mp_cpu = mp.cpu_count()
+        with mp.Pool(mp_cpu) as p::
             eddies = p.starmap(detect_SSH_core, arguments)
         p.close()
         p.join()
