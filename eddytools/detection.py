@@ -10,10 +10,7 @@ import pandas as pd
 from scipy import ndimage
 from scipy.signal import find_peaks
 import cftime as cft
-try:
-    from dask import bag as dask_bag
-except:
-    print("Working without dask bags.")
+import itertools
 
 def maskandcut(data, var, det_param, regrid_avoided=False):
     ''' Mask regions in the dataset where the ocean is shallower than a
