@@ -760,6 +760,7 @@ def detect_OW(data, det_param, ow_var, vort_var, use_mp=False,
                         itertools.repeat(regrid_avoided)
                         )
         print("Detecting eddies in Okubo-Weiss parameter fields")
+        print("__name__ =", __name__)
         if __name__ == "__main__":
             with mp.Pool(mp.cpu_count()) as p:
                 eddies = p.map(detect_OW_core, arguments)
