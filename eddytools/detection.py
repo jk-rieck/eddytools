@@ -749,6 +749,12 @@ def detect_OW(data, det_param, ow_var, vort_var, use_mp=False,
         # Else just use scalar from `det_param`
         OW_thr = det_param['OW_thr'] * (det_param['OW_thr_factor'])
     if use_mp:
+        OW = OW.compute()
+        vort = vort.compute()
+        e1f = e1f.compute()
+        e2f = e2f.compute()
+        if len(np.shape(data[OW_thr_name])) > 1:
+            OW_thr = OW_thr.compute()
         ## set range of parallel executions
         pexps = range(0, len(OW['time']))
         ## prepare arguments
@@ -893,6 +899,9 @@ def detect_SSH(data, det_param, ssh_var, use_mp=False):
                           det_param['dssh'])
     ssh_crits = np.sort(ssh_crits) # make sure its increasing order
     if use_mp:
+        SSH = SSH.compute()
+        e1f = e1f.compute()
+        e2f = e2f.compute()
         ## set range of parallel executions
         pexps = range(0, len(SSH['time']))
         ## prepare arguments
