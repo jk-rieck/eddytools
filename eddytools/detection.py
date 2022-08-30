@@ -500,7 +500,8 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
     return eddi
 
 
-def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
+def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
+                   regrid_avoided=False):
     '''
     Detect eddies present in field which satisfy the 5 criteria
     outlined in Chelton et al., Prog. ocean., 2011, App. B.2.:
@@ -526,6 +527,9 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f):
             area: area of the detected eddies in km*2
             scale: scale of the detected eddies (see Chelton et al. 2011)
     '''
+    if regrid_avoided == True:
+        raise ValueError("regrid_avoided cannot be used in combination"
+                         + "with detection based on SSH (yet).")
     #set up grid
     len_deg_lat = 111.325 # length of 1 degree of latitude [km]
     llon, llat = np.meshgrid(SSH.lon, SSH.lat)
@@ -799,7 +803,7 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False,
     return eddies
 
 
-def detect_SSH(data, det_param, ssh_var, use_bags=False):
+def detect_SSH(data, det_param, ssh_var, use_bags=False, regrid_avoided=False):
     ''' Detect eddies based on SSH following Chelton 2011. Prepares the
     necessary input for detect_SSH_core that performs the actual detection.
     Parallel computation of timesteps using dask bag.
@@ -859,6 +863,9 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False):
                           }}}
         where `t` is the time step and `e` is the eddy number.
     '''
+    if regrid_avoided == True:
+        raise ValueError("regrid_avoided cannot be used in combination"
+                         + "with detection based on SSH (yet).")
     # Verify that the specified region lies within the dataset provided
     if (det_param['lon1'] < np.around(data['lon'].min())
         or det_param['lon2'] > np.around(data['lon'].max())):
