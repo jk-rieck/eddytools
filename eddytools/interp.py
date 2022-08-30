@@ -348,9 +348,9 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
                         {x_r: 'lon', y_r: 'lat'}
                           ).sel(lon=slice(lon[0], lon[-1]),
                                 lat=slice(lat[0], lat[-1]))
-            # Update `data_int` with the regridded/interpolated variable
-            data_int = update_data(data_int, var_int, var,
-                                   regrid_avoided=regrid_avoided)
+        # Update `data_int` with the regridded/interpolated variable
+        data_int = update_data(data_int, var_int, var,
+                               regrid_avoided=regrid_avoided)
 
     # Always interpolate fmask, e1f and e2f
     if fmask not in int_param['mask_to_interpolate']:
