@@ -22,7 +22,6 @@ import cftime as cft
 def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
     """ Horizontal interpolation of variables using `xesmf`
     (https://xesmf.readthedocs.io/en/latest/).
-
     Parameters
     ----------
     data : xarray.DataSet
@@ -428,7 +427,6 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
 def create_rect_grid(int_param):
     '''Create a rectangular grid based on the information (min/max longitude
     and latitude, and resolution) in `int_param`.
-
     Parameters
     ----------
     int_param : dict
@@ -455,7 +453,6 @@ def create_rect_grid(int_param):
             'vars_to_interpolate': ['var1', 'var2', ...],
             'mask_to_interpolate': ['mask1', 'mask2', ...]
             }
-
     Returns
     -------
     rect_grid : xarray.DataSet
@@ -494,7 +491,6 @@ def create_empty_ds(data, int_param, lon, lat, t):
     (`z_c` is favoured if there are `z_c` and `z_l` present). If you want to
     interpolate variables on different depth dimensions, you need to do that
     seperately.
-
     Parameters
     ----------
     data : xarray.DataSet
@@ -524,8 +520,6 @@ def create_empty_ds(data, int_param, lon, lat, t):
             'vars_to_interpolate': ['var1', 'var2', ...],
             'mask_to_interpolate': ['mask1', 'mask2', ...]
             }
-
-
     Returns
     -------
     data_int : xarray.DataSet
@@ -575,12 +569,10 @@ def create_empty_ds(data, int_param, lon, lat, t):
 def rename_dims(var_to_int):
     '''Rename dimensions of `var_to_int` so they are compatible with the
     grid that we want to interpolate to.
-
     Parameters
     ----------
     var_to_int : xarray.DataArray
         Data array with the variable that is later to be interpolated.
-
     Returns
     -------
     var_to_int_out : xarray.DataArray
@@ -641,12 +633,10 @@ def rename_dims(var_to_int):
 
 def monotonic_lon(var_to_int):
     '''Make sure longitude is monotonically increasing in `var_to_int`.
-
     Parameters
     ----------
     var_to_int : xarray.DataArray
         Data array with the variable that is later to be interpolated.
-
     Returns
     -------
     var_to_int_out : xarray.DataArray
@@ -665,7 +655,6 @@ def monotonic_lon(var_to_int):
 
 def update_data(data_int, var_int, var, regrid_avoided=False):
     '''Add the interpolated variable `var_int` to the dataset `data_int`.
-
     Parameters
     ----------
     data_int : xarray.DataSet
@@ -710,7 +699,6 @@ def spatial_filter(data_int, int_param):
     wavelength scales larger than cut_lon in longitude and
     cut_lat in latitude direction from the input field using a Gaussian
     filter.
-
     Parameters
     ----------
     data_int : xarray.DataSet
@@ -745,12 +733,10 @@ def spatial_filter(data_int, int_param):
             'cut_lat': 1 # cutoff wavelength in latitude direction in degree
                          # only used with spatial_filter()
             }
-
     Returns
     -------
     data_int : xarray.DataSet
         Data filtered.
-
     '''
     ## load input parameters
     cut_lon = int_param['cut_lon']

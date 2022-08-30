@@ -1,10 +1,8 @@
 '''detection
-
 Collection of functions needed for the detection of mesoscale eddies
 based on the Okubo-Weiss parameter. The data is assumed to have been
 interpolated with the `interp.py` module of this package or at least
 needs to have the same structure.
-
 '''
 
 import numpy as np
@@ -21,7 +19,6 @@ def maskandcut(data, var, det_param, regrid_avoided=False):
     ''' Mask regions in the dataset where the ocean is shallower than a
     depth threshold and only select specified horizontal and temporal
     extent.
-
     Parameters
     ----------
     data : xarray.DataSet
@@ -102,7 +99,6 @@ def maskandcut(data, var, det_param, regrid_avoided=False):
 
 def monotonic_lon(var, det_param):
     '''Make sure longitude is monotonically increasing in `var`.
-
     Parameters
     ----------
     var : xarray.DataArray
@@ -137,7 +133,6 @@ def monotonic_lon(var, det_param):
             'Npix_min': 15, # min. num. grid cells to be considered as eddy
             'Npix_max': 1000 # max. num. grid cells to be considered as eddy
             }
-
     Returns
     -------
     var : xarray.DataArray
@@ -161,12 +156,10 @@ def monotonic_lon(var, det_param):
 
 def restore_lon(data):
     '''Make sure longitude is between -180 and 180 in `data`.
-
     Parameters
     ----------
     data : xarray.DataArray
         Data array with the variable that is later to be interpolated.
-
     Returns
     -------
     data : xarray.DataArray
@@ -180,12 +173,10 @@ def restore_lon(data):
 
 def get_indeces(data):
     '''Retrieve indeces of regions detected with ndimage.label
-
     Parameters
     ----------
     data : ndimage.label
         Return of ndimage.label()
-
     Returns
     -------
         Indeces of regions
@@ -201,7 +192,6 @@ def distance_matrix(lons, lats):
     d = EARTH_RADIUS*Arccos(c)
     where EARTH_RADIUS is in km and the angles are in radians.
     Source: http://mathforum.org/library/drmath/view/54680.html
-
     Usage:
         d = distance_matrix(lons,lats)
     Input:
@@ -232,14 +222,12 @@ def distance_matrix(lons, lats):
 
 def get_width(data, thr):
     '''Calculate the width of an eddy in grid cell space
-
     Parameters
     ----------
     data : array
         1D array with values of the OW parameter across the detected feature.
     thr : float
         The OW-threshold below which an area is considered and eddy.
-
     Returns
     -------
     width : int
@@ -253,7 +241,6 @@ def get_width(data, thr):
 def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                    regrid_avoided=False):
     ''' Core function for the detection of eddies, used by detect_OW().
-
     Parameters
     ----------
     det_param : dict
@@ -375,8 +362,8 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
             del eddi[e]
             continue
         min_width = int(np.floor(np.sqrt(region_Npix / np.pi)))
-        X_cen = int(np.around(np.mean(index[1])))
-        Y_cen = int(np.around(np.mean(index[0])))
+        X_cen = int(np.floor(np.mean(index[1])))
+        Y_cen = int(np.floor(np.mean(index[0])))
         if len(np.shape(data[det_param['OW_thr_name']])) > 1:
             peak_thr = OW_thr.values[interior].mean()
         else:
@@ -510,15 +497,11 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
     3) There is at least one local SSH maximum (minimum for cyclonic)
     4) The amplitude exceeds a given threshold
     5) The maximum distance between two points of an eddy is below a given value
-
     Npix_min, Npix_max, amp_thresh, d_thresh specify the constants
     used by the eddy detection algorithm (see Chelton paper for
     more details)
-
     Input:
         data: 2D filtered SSH field
-
-
     Output:
         eddies: dictionary containing the following variables
             lon_cen: longitude coordinate of detected eddy centers
@@ -658,7 +641,6 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
 def detect_OW(data, det_param, ow_var, vort_var, use_bags=False,
               regrid_avoided=False):
     ''' Detect eddies based on specified Okubo-Weiss parameter.
-
     Parameters
     ----------
     data : xarray.DataSet
@@ -807,7 +789,6 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False, regrid_avoided=False):
     ''' Detect eddies based on SSH following Chelton 2011. Prepares the
     necessary input for detect_SSH_core that performs the actual detection.
     Parallel computation of timesteps using dask bag.
-
     Parameters
     ----------
     data : xarray.DataSet
@@ -845,7 +826,6 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False, regrid_avoided=False):
             }
     ssh_var : str
         Name of the variable in `data` containing the SSH.
-
     Returns
     -------
     eddies : dict
