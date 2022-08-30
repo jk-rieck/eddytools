@@ -79,7 +79,7 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
         regrid_method = int_param['regrid_method']
     except:
         regrid_method = None
-    if int_method == None:
+    if regrid_method == None:
         regrid_method = 'bilinear'
     try:
         ext_method = int_param['ext_method']
