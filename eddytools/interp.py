@@ -375,7 +375,7 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
             # For grids that have similar resolutions, method could be changed
             # to 'nearest_s2d', which is quicker and might be sufficient....
             regridder = xe.Regridder(mask_to_int, rect_grid,
-                                     method=int_method,
+                                     method=regrid_method,
                                      extrap_method=ext_method,
                                      weights=weights)
             print('Regridding ' + str(mask))
