@@ -74,6 +74,7 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
     m = False
     o = False
     regridder = None
+    regrid_avoided = False
     # Define interpolation and extrapolation methods
     try:
         regrid_method = int_param['regrid_method']
