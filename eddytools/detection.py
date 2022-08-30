@@ -10,6 +10,11 @@ import pandas as pd
 from scipy import ndimage
 from scipy.signal import find_peaks
 import cftime as cft
+import itertools
+try:
+    import multiprocessing as mp
+except:
+    print("multiprocessing not possible")
 try:
     from dask import bag as dask_bag
 except:
@@ -638,7 +643,8 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
     return eddi
 
 
-def detect_OW(data, det_param, ow_var, vort_var, use_bags=False,
+def detect_OW(data, det_param, ow_var, vort_var,
+              use_bags=False, use_mp=False, mp_cpu=2,
               regrid_avoided=False):
     ''' Detect eddies based on specified Okubo-Weiss parameter.
     Parameters
@@ -681,6 +687,14 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False,
         Name of the variable in `data` containing the Okubo-Weiss parameter.
     vort_var : str
         Name of the variable in `data` containing the vorticity field.
+    use_bags : bool
+        If True, dask_bags is used to parallelize the detection. Default is
+        False.
+    use_mp : bool
+        If True, multiprocessing is used to parallelize the detection. Default
+        is False.
+    mp_cpu : int
+        Number of cpus to use when using multiprocessing.
     regrid_avoided : bool
         If True indicates that regridding has been avoided during the
         interpolation and the data has 2D coordinates. Default is False.
@@ -702,6 +716,11 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False,
                           }}}
         where `t` is the time step and `e` is the eddy number.
     '''
+    # make sure arguments are compatible
+    if use_bags and use_mp:
+        raise ValueError('Cannot use dask_bags and multiprocessing at the'
+                         + 'same time. Set either `use_bags` or `use_mp`'
+                         + 'to `False`.')
     # Verify that the specified region lies within the dataset provided
     if (det_param['lon1'] < np.around(data['lon'].min())
        or det_param['lon2'] > np.around(data['lon'].max())):
@@ -754,7 +773,41 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False,
     else:
         # Else just use scalar from `det_param`
         OW_thr = det_param['OW_thr'] * (det_param['OW_thr_factor'])
-    if use_bags:
+    if use_mp:
+        OW = OW.compute()
+        vort = vort.compute()
+        e1f = e1f.compute()
+        e2f = e2f.compute()
+        if len(np.shape(data[OW_thr_name])) > 1:
+            OW_thr = OW_thr.compute()
+        ## set range of parallel executions
+        pexps = range(0, len(OW['time']))
+        ## prepare arguments
+        arguments = zip(
+                        itertools.repeat(data),
+                        itertools.repeat(det_param.copy()),
+                        itertools.repeat(OW),
+                        itertools.repeat(vort),
+                        pexps,
+                        itertools.repeat(OW_thr),
+                        itertools.repeat(e1f),
+                        itertools.repeat(e2f),
+                        itertools.repeat(regrid_avoided)
+                        )
+        print("Detecting eddies in Okubo-Weiss parameter fields")
+        if mp_cpu > mp.cpu_count():
+            mp_cpu = mp.cpu_count()
+        with mp.Pool(mp_cpu) as p:
+            eddies = p.starmap(detect_OW_core, arguments)
+        p.close()
+        p.join()
+    elif use_bags:
+        OW = OW.compute()
+        vort = vort.compute()
+        e1f = e1f.compute()
+        e2f = e2f.compute()
+        if len(np.shape(data[OW_thr_name])) > 1:
+            OW_thr = OW_thr.compute()
         ## set range of parallel executions
         pexps = range(0, len(OW['time']))
         ## generate dask bag instance
@@ -785,7 +838,9 @@ def detect_OW(data, det_param, ow_var, vort_var, use_bags=False,
     return eddies
 
 
-def detect_SSH(data, det_param, ssh_var, use_bags=False, regrid_avoided=False):
+def detect_SSH(data, det_param, ssh_var,
+              use_bags=False, use_mp=False, mp_cpu=2,
+              regrid_avoided=False):
     ''' Detect eddies based on SSH following Chelton 2011. Prepares the
     necessary input for detect_SSH_core that performs the actual detection.
     Parallel computation of timesteps using dask bag.
@@ -826,6 +881,17 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False, regrid_avoided=False):
             }
     ssh_var : str
         Name of the variable in `data` containing the SSH.
+    use_bags : bool
+        If True, dask_bags is used to parallelize the detection. Default is
+        False.
+    use_mp : bool
+        If True, multiprocessing is used to parallelize the detection. Default
+        is False.
+    mp_cpu : int
+        Number of cpus to use when using multiprocessing.
+    regrid_avoided : bool
+        If True indicates that regridding has been avoided during the
+        interpolation and the data has 2D coordinates. Default is False.
     Returns
     -------
     eddies : dict
@@ -843,6 +909,11 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False, regrid_avoided=False):
                           }}}
         where `t` is the time step and `e` is the eddy number.
     '''
+    # make sure arguments are compatible
+    if use_bags and use_mp:
+        raise ValueError('Cannot use dask_bags and multiprocessing at the'
+                         + 'same time. Set either `use_bags` or `use_mp`'
+                         + 'to `False`.')
     if regrid_avoided == True:
         raise ValueError("regrid_avoided cannot be used in combination"
                          + "with detection based on SSH (yet).")
@@ -893,7 +964,33 @@ def detect_SSH(data, det_param, ssh_var, use_bags=False, regrid_avoided=False):
                           det_param['ssh_thr'] + det_param['dssh'] / 2,
                           det_param['dssh'])
     ssh_crits = np.sort(ssh_crits) # make sure its increasing order
-    if use_bags:
+    if use_mp:
+        SSH = SSH.compute()
+        e1f = e1f.compute()
+        e2f = e2f.compute()
+        ## set range of parallel executions
+        pexps = range(0, len(SSH['time']))
+        ## prepare arguments
+        arguments = zip(
+                        itertools.repeat(data),
+                        itertools.repeat(det_param.copy()),
+                        itertools.repeat(SSH),
+                        pexps,
+                        itertools.repeat(ssh_crits),
+                        itertools.repeat(e1f),
+                        itertools.repeat(e2f)
+                        )
+        print("Detecting eddies in SSH parameter fields")
+        if mp_cpu > mp.cpu_count():
+            mp_cpu = mp.cpu_count()
+        with mp.Pool(mp_cpu) as p:
+            eddies = p.starmap(detect_SSH_core, arguments)
+        p.close()
+        p.join()
+    elif use_bags:
+        SSH = SSH.compute()
+        e1f = e1f.compute()
+        e2f = e2f.compute()
         ## set range of parallel executions
         pexps = range(0, len(SSH['time']))
         ## generate dask bag instance
