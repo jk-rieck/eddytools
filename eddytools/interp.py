@@ -13,7 +13,6 @@ https://git.geomar.de/jan-klaus-rieck/interpolate-orca.
 
 import numpy as np
 import xarray as xr
-import xesmf as xe
 import xgcm
 from scipy import ndimage
 import cftime as cft
@@ -21,7 +20,7 @@ import cftime as cft
 
 def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
     """ Horizontal interpolation of variables using `xesmf`
-    (https://xesmf.readthedocs.io/en/latest/).
+    (https://xesmf.readthedocs.io/en/latest/) if available.
     Parameters
     ----------
     data : xarray.DataSet
@@ -67,6 +66,12 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
     data_int : xarray.DataSet
         Data interpolated onto a regular grid.
     """
+    try:
+        import xesmf as xe
+    except:
+        avoid_regrid = True
+        print("xESMF is not available, will not perform regridding."
+              + " (same as avoid_regrid=True)")
     # Initialize all booleans as False
     latlon = False
     cart = False
