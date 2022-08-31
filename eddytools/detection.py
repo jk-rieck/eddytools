@@ -60,7 +60,11 @@ def maskandcut(data, var, det_param, regrid_avoided=False):
             'OW_thr_name': 'OW_std', # name of Okubo-Weiss parameter threshold
             'OW_thr_factor': -0.3, # Okubo-Weiss parameter factor
             'Npix_min': 15, # min. num. grid cells to be considered as eddy
-            'Npix_max': 1000 # max. num. grid cells to be considered as eddy
+            'Npix_max': 1000, # max. num. grid cells to be considered as eddy
+            'no_long': False, # If True, elongated shapes will not be considered
+            'no_two': False # If True, eddies with two minima in the OW
+                            # parameter and a OW > OW_thr in between  will not
+                            # be considered
             }
     regrid_avoided : bool
         If True indicates that regridding has been avoided during the
@@ -136,7 +140,11 @@ def monotonic_lon(var, det_param):
             'OW_thr_name': 'OW_std', # name of Okubo-Weiss parameter threshold
             'OW_thr_factor': -0.3, # Okubo-Weiss parameter factor
             'Npix_min': 15, # min. num. grid cells to be considered as eddy
-            'Npix_max': 1000 # max. num. grid cells to be considered as eddy
+            'Npix_max': 1000, # max. num. grid cells to be considered as eddy
+            'no_long': False, # If True, elongated shapes will not be considered
+            'no_two': False # If True, eddies with two minima in the OW
+                            # parameter and a OW > OW_thr in between  will not
+                            # be considered
             }
     Returns
     -------
@@ -254,8 +262,6 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
         det_param = {
             'model': 'model_name', # either ORCA or MITgcm
             'grid': 'latlon', # either latlon or cartesian
-            'hemi': 'south', # hemisphere of the grid in case it cannot be
-                             # inferred from lat information
             'start_time': 'YYYY-MM-DD', # time range start
             'end_time': 'YYYY-MM-DD', # time range end
             'calendar': 'standard', # calendar, must be either 360_day or
@@ -277,7 +283,11 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
             'OW_thr_name': 'OW_std', # name of Okubo-Weiss parameter threshold
             'OW_thr_factor': -0.3, # Okubo-Weiss parameter factor
             'Npix_min': 15, # min. num. grid cells to be considered as eddy
-            'Npix_max': 1000 # max. num. grid cells to be considered as eddy
+            'Npix_max': 1000, # max. num. grid cells to be considered as eddy
+            'no_long': False, # If True, elongated shapes will not be considered
+            'no_two': False # If True, eddies with two minima in the OW
+                            # parameter and a OW > OW_thr in between  will not
+                            # be considered
             }
     OW : xarray.DataArray
         Xarray DataArray of the Okubo-Weiss parameter.
@@ -366,45 +376,52 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
         if interior.sum() == 0:
             del eddi[e]
             continue
-        min_width = int(np.floor(np.sqrt(region_Npix / np.pi)))
-        X_cen = int(np.floor(np.mean(index[1])))
-        Y_cen = int(np.floor(np.mean(index[0])))
-        if len(np.shape(data[det_param['OW_thr_name']])) > 1:
-            peak_thr = OW_thr.values[interior].mean()
+        if (det_param['no_long'] or det_param['no_two']):
+            min_width = int(np.around(np.sqrt(region_Npix / np.pi)))
+            X_cen = int(np.around(np.mean(index[1])))
+            Y_cen = int(np.around(np.mean(index[0])))
+        if det_param['no_two']:
+            if len(np.shape(data[det_param['OW_thr_name']])) > 1:
+                peak_thr = OW_thr.values[interior].mean()
+            else:
+                peak_thr = OW_thr
+            X_peaks = len(find_peaks(-OW.isel(time=t).values[Y_cen,
+                          iimin:iimax], height=-peak_thr)[0])
+            Y_peaks = len(find_peaks(-OW.isel(time=t).values[ijmin:ijmax,
+                          X_cen], height=-peak_thr)[0])
+            if ((X_peaks > 1) | (Y_peaks > 1)):
+                Ypix_cen1 = get_width(OW.isel(time=t).values[ijmin:ijmax,
+                                X_cen], peak_thr)
+                Ypix_cen2 = get_width(OW.isel(time=t).values[ijmax-1:ijmin2:-1,
+                                X_cen], peak_thr)
+                Xpix_cen1 = get_width(OW.isel(time=t).values[Y_cen,
+                                iimin:iimax], peak_thr)
+                Xpix_cen2 = get_width(OW.isel(time=t).values[Y_cen,
+                                iimax-1:iimin2:-1], peak_thr)
+                eddy_no_horseshoe = (((Xpix_cen1 > min_width)
+                                    & (Ypix_cen1 > min_width)) |
+                                     ((Xpix_cen2 > min_width)
+                                    & (Ypix_cen2 > min_width)) |
+                                     ((Xpix_cen2 > min_width)
+                                    & (Ypix_cen1 > min_width)) |
+                                     ((Xpix_cen1 > min_width)
+                                    & (Ypix_cen2 > min_width)))
+            else:
+                eddy_no_horseshoe = True
         else:
-            peak_thr = OW_thr
-        X_peaks = len(find_peaks(-OW.isel(time=t).values[Y_cen, iimin:iimax],
-                                 height=-peak_thr)[0])
-        Y_peaks = len(find_peaks(-OW.isel(time=t).values[ijmin:ijmax, X_cen],
-                                 height=-peak_thr)[0])
-        if ((X_peaks > 1) | (Y_peaks > 1)):
-            Ypix_cen1 = get_width(OW.isel(time=t).values[ijmin:ijmax, X_cen],
-                                  peak_thr)
-            Ypix_cen2 = get_width(OW.isel(time=t).values[ijmax-1:ijmin2:-1,
-                                                         X_cen], peak_thr)
-            Xpix_cen1 = get_width(OW.isel(time=t).values[Y_cen, iimin:iimax],
-                                                         peak_thr)
-            Xpix_cen2 = get_width(OW.isel(time=t).values[Y_cen,
-                                                         iimax-1:iimin2:-1],
-                                  peak_thr)
+            eddy_no_horseshoe = True
+        if det_param['no_long']:
+            Ypix_cen = np.sum(index[1] == X_cen)
+            Xpix_cen = np.sum(index[0] == Y_cen)
+            eddy_not_too_thin = ((Xpix_cen > min_width)
+                               & (Ypix_cen > min_width))
         else:
-            Ypix_cen1 = np.sum(index[1] == X_cen)
-            Ypix_cen2 = np.sum(index[1] == X_cen)
-            Xpix_cen1 = np.sum(index[0] == Y_cen)
-            Xpix_cen2 = np.sum(index[0] == Y_cen)
-        eddy_not_too_thin = (((Xpix_cen1 > min_width)
-                            & (Ypix_cen1 > min_width)) |
-                             ((Xpix_cen2 > min_width)
-                            & (Ypix_cen2 > min_width)) |
-                             ((Xpix_cen2 > min_width)
-                            & (Ypix_cen1 > min_width)) |
-                             ((Xpix_cen1 > min_width)
-                            & (Ypix_cen2 > min_width)))
+            eddy_not_too_thin = True
         # check for local extrema
         has_internal_ext = (OW.isel(time=t).values[interior].min()
                             < OW.isel(time=t).values[exterior].min())
         if (eddy_area_within_limits & eddy_not_too_thin
-            & has_internal_ext):
+            & eddy_no_horseshoe & has_internal_ext):
             # If the region is not too small and not too big, extract
             # eddy information
             eddi[e]['time'] = OW.isel(time=t)['time'].values
@@ -422,9 +439,9 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
             j_cen, i_cen = j_cen + ijmin, i_cen + iimin
             if regrid_avoided:
                 lon_eddies = np.interp(i_cen, range(0, len_OW_lon),
-                                OW['lon'][int(np.floor(j_cen)), :].values)
+                                OW['lon'][int(np.around(j_cen)), :].values)
                 lat_eddies = np.interp(j_cen, range(0, len_OW_lat),
-                                OW['lat'][:, int(np.floor(i_cen))].values)
+                                OW['lat'][:, int(np.around(i_cen))].values)
             else:
                 lon_eddies = np.interp(i_cen, range(0, len(OW['lon'])),
                                 OW['lon'].values)
@@ -579,9 +596,9 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
                 d = distance_matrix(lon_ext, lat_ext)
                 is_small_eddy = d.max() < det_param['d_thr']
         # 6. Ratio of x- to y-extension of eddy has to be > 0.5
-                min_width = int(np.floor(np.sqrt(region_Npix) / 2))
-                X_cen = int(np.floor(np.mean(index[1])))
-                Y_cen = int(np.floor(np.mean(index[0])))
+                min_width = int(np.around(np.sqrt(region_Npix) / 2))
+                X_cen = int(np.around(np.mean(index[1])))
+                Y_cen = int(np.around(np.mean(index[0])))
                 Ypix_cen = np.sum(index[1] == X_cen)
                 Xpix_cen = np.sum(index[0] == Y_cen)
                 eddy_not_too_thin = ((Xpix_cen > min_width)
@@ -681,7 +698,11 @@ def detect_OW(data, det_param, ow_var, vort_var,
             'OW_thr_name': 'OW_std', # name of Okubo-Weiss parameter threshold
             'OW_thr_factor': -0.3, # Okubo-Weiss parameter factor
             'Npix_min': 15, # min. num. grid cells to be considered as eddy
-            'Npix_max': 1000 # max. num. grid cells to be considered as eddy
+            'Npix_max': 1000, # max. num. grid cells to be considered as eddy
+            'no_long': False, # If True, elongated shapes will not be considered
+            'no_two': False # If True, eddies with two minima in the OW
+                            # parameter and a OW > OW_thr in between  will not
+                            # be considered
             }
     ow_var : str
         Name of the variable in `data` containing the Okubo-Weiss parameter.
