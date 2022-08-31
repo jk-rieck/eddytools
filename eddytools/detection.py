@@ -376,11 +376,11 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
         if interior.sum() == 0:
             del eddi[e]
             continue
-        if (no_long or no_two):
+        if (det_param['no_long'] or det_param['no_two']):
             min_width = int(np.around(np.sqrt(region_Npix / np.pi)))
             X_cen = int(np.around(np.mean(index[1])))
             Y_cen = int(np.around(np.mean(index[0])))
-        if no_two:
+        if det_param['no_two']:
             if len(np.shape(data[det_param['OW_thr_name']])) > 1:
                 peak_thr = OW_thr.values[interior].mean()
             else:
@@ -410,7 +410,7 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                 eddy_no_horseshoe = True
         else:
             eddy_no_horseshoe = True
-        if no_long:
+        if det_param['no_long']:
             Ypix_cen = np.sum(index[1] == X_cen)
             Xpix_cen = np.sum(index[0] == Y_cen)
             eddy_not_too_thin = ((Xpix_cen > min_width)
