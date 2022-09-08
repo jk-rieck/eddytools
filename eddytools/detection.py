@@ -398,14 +398,23 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                                 iimin:iimax], peak_thr)
                 Xpix_cen2 = get_width(OW.isel(time=t).values[Y_cen,
                                 iimax-1:iimin2:-1], peak_thr)
-                eddy_no_horseshoe = (((Xpix_cen1 > min_width)
-                                    & (Ypix_cen1 > min_width)) |
-                                     ((Xpix_cen2 > min_width)
-                                    & (Ypix_cen2 > min_width)) |
-                                     ((Xpix_cen2 > min_width)
-                                    & (Ypix_cen1 > min_width)) |
-                                     ((Xpix_cen1 > min_width)
-                                    & (Ypix_cen2 > min_width)))
+                tmp_no_horseshoe = (((Xpix_cen1 > min_width)
+                                   & (Ypix_cen1 > min_width)) |
+                                    ((Xpix_cen2 > min_width)
+                                   & (Ypix_cen2 > min_width)) |
+                                    ((Xpix_cen2 > min_width)
+                                   & (Ypix_cen1 > min_width)) |
+                                    ((Xpix_cen1 > min_width)
+                                   & (Ypix_cen2 > min_width)))
+                Xmin = np.min(OW.isel(time=t).values[Y_cen, iimin:iimax])
+                Xmax = np.max(OW.isel(time=t).values[Y_cen, iimin:iimax])
+                Xdiff = Xmin - Xmax
+                Ymin = np.min(OW.isel(time=t).values[ijmin:ijmax, X_cen])
+                Ymax = np.max(OW.isel(time=t).values[ijmin:ijmax, X_cen])
+                Ydiff = Ymin - Ymax
+                Xdiff_small = np.abs(Xdiff) < 0.5 * np.abs(Xmin)
+                Ydiff_small = np.abs(Ydiff) < 0.5 * np.abs(Ymin)
+                eddy_no_horseshoe = tmp_no_horseshoe & Xdiff_small & Ydiff_small
             else:
                 eddy_no_horseshoe = True
         else:
