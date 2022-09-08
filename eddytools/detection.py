@@ -377,10 +377,11 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
             del eddi[e]
             continue
         if (det_param['no_long'] or det_param['no_two']):
-            min_width = int(np.around(np.sqrt(region_Npix / np.pi)))
+            min_width = int(np.floor(np.sqrt(region_Npix / np.pi)))
             X_cen = int(np.around(np.mean(index[1])))
             Y_cen = int(np.around(np.mean(index[0])))
         if det_param['no_two']:
+            peakdiff_factor = det_param['peakdiff_factor']
             if len(np.shape(data[det_param['OW_thr_name']])) > 1:
                 peak_thr = OW_thr.values[interior].mean()
             else:
@@ -406,14 +407,26 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                                    & (Ypix_cen1 > min_width)) |
                                     ((Xpix_cen1 > min_width)
                                    & (Ypix_cen2 > min_width)))
-                Xmin = np.min(OW.isel(time=t).values[Y_cen, iimin:iimax])
-                Xmax = np.max(OW.isel(time=t).values[Y_cen, iimin:iimax])
-                Xdiff = Xmin - Xmax
-                Ymin = np.min(OW.isel(time=t).values[ijmin:ijmax, X_cen])
-                Ymax = np.max(OW.isel(time=t).values[ijmin:ijmax, X_cen])
-                Ydiff = Ymin - Ymax
-                Xdiff_small = np.abs(Xdiff) < 0.5 * np.abs(Xmin)
-                Ydiff_small = np.abs(Ydiff) < 0.5 * np.abs(Ymin)
+                if (X_peaks > 1):
+                    X_peak1 = iimin + X_peak_info[0][0]
+                    X_peak2 = iimin + X_peak_info[0][1]
+                    Xmin = -np.max(X_peak_info[1]['peak_heights'])
+                    Xmax = np.max(OW.isel(time=t).values[Y_cen,
+                                                         X_peak1:X_peak2])
+                    Xdiff = Xmin - Xmax
+                else:
+                    Xdiff = 0
+                if (Y_peaks > 1):
+                    Y_peak1 = ijmin + Y_peak_info[0][0]
+                    Y_peak2 = ijmin + Y_peak_info[0][1]
+                    Ymin = -np.max(Y_peak_info[1]['peak_heights'])
+                    Ymax = np.max(OW.isel(time=t).values[Y_peak1:Y_peak2,
+                                                         X_cen])
+                    Ydiff = Ymin - Ymax
+                else:
+                    Ydiff = 0
+                Xdiff_small = np.abs(Xdiff) < peakdiff_factor * np.abs(Xmin)
+                Ydiff_small = np.abs(Ydiff) < peakdiff_factor * np.abs(Ymin)
                 eddy_no_horseshoe = tmp_no_horseshoe & Xdiff_small & Ydiff_small
             else:
                 eddy_no_horseshoe = True
