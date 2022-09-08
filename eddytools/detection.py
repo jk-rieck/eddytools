@@ -416,6 +416,7 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                     Xmax = np.max(OW.isel(time=t).values[Y_cen,
                                                          X_peak1:X_peak2])
                     Xdiff = Xmin - Xmax
+                    Xmin = 1
                 else:
                     Xdiff = 0
                 if (Y_peaks > 1):
@@ -425,6 +426,7 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                     Ymax = np.max(OW.isel(time=t).values[Y_peak1:Y_peak2,
                                                          X_cen])
                     Ydiff = Ymin - Ymax
+                    Ymin = 1
                 else:
                     Ydiff = 0
                 Xdiff_small = np.abs(Xdiff) < peakdiff_factor * np.abs(Xmin)
