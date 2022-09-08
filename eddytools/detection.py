@@ -386,10 +386,12 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                 peak_thr = OW_thr.values[interior].mean()
             else:
                 peak_thr = OW_thr
-            X_peaks = len(find_peaks(-OW.isel(time=t).values[Y_cen,
-                          iimin:iimax], height=-peak_thr)[0])
-            Y_peaks = len(find_peaks(-OW.isel(time=t).values[ijmin:ijmax,
-                          X_cen], height=-peak_thr)[0])
+            X_peak_info = find_peaks(-OW.isel(time=t).values[Y_cen,
+                              iimin:iimax], height=-peak_thr)
+            Y_peak_info = find_peaks(-OW.isel(time=t).values[ijmin:ijmax,
+                              X_cen], height=-peak_thr)
+            X_peaks = len(X_peak_info[0])
+            Y_peaks = len(Y_peak_info[0])
             if ((X_peaks > 1) | (Y_peaks > 1)):
                 Ypix_cen1 = get_width(OW.isel(time=t).values[ijmin:ijmax,
                                 X_cen], peak_thr)
