@@ -416,9 +416,9 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                     Xmax = np.max(OW.isel(time=t).values[Y_cen,
                                                          X_peak1:X_peak2])
                     Xdiff = Xmin - Xmax
-                    Xmin = 1
                 else:
                     Xdiff = 0
+                    Xmin = 1
                 if (Y_peaks > 1):
                     Y_peak1 = ijmin + Y_peak_info[0][0]
                     Y_peak2 = ijmin + Y_peak_info[0][1]
@@ -426,9 +426,9 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                     Ymax = np.max(OW.isel(time=t).values[Y_peak1:Y_peak2,
                                                          X_cen])
                     Ydiff = Ymin - Ymax
-                    Ymin = 1
                 else:
                     Ydiff = 0
+                    Ymin = 1
                 Xdiff_small = np.abs(Xdiff) < peakdiff_factor * np.abs(Xmin)
                 Ydiff_small = np.abs(Ydiff) < peakdiff_factor * np.abs(Ymin)
                 eddy_no_horseshoe = tmp_no_horseshoe & Xdiff_small & Ydiff_small
