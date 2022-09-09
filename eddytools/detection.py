@@ -381,7 +381,6 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
             X_cen = int(np.around(np.mean(index[1])))
             Y_cen = int(np.around(np.mean(index[0])))
         if det_param['no_two']:
-            peakdiff_factor = det_param['peakdiff_factor']
             if len(np.shape(data[det_param['OW_thr_name']])) > 1:
                 peak_thr = OW_thr.values[interior].mean()
             else:
@@ -416,6 +415,9 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                     Xmax = np.max(OW.isel(time=t).values[Y_cen,
                                                          X_peak1:X_peak2])
                     Xdiff = Xmin - Xmax
+                    Xpix_ratio = Xpix_cen1 / Xpix_cen2
+                    if ((Xpix_ratio > 3.) | (Xpix_ratio < 1/3.)):
+                        Xdiff = 0
                 else:
                     Xdiff = 0
                     Xmin = 1
@@ -426,11 +428,14 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                     Ymax = np.max(OW.isel(time=t).values[Y_peak1:Y_peak2,
                                                          X_cen])
                     Ydiff = Ymin - Ymax
+                    Ypix_ratio = Ypix_cen1 / Ypix_cen2
+                    if ((Ypix_ratio > 3.) | (Ypix_ratio < 1/3.)):
+                        Ydiff = 0
                 else:
                     Ydiff = 0
                     Ymin = 1
-                Xdiff_small = np.abs(Xdiff) < peakdiff_factor * np.abs(Xmin)
-                Ydiff_small = np.abs(Ydiff) < peakdiff_factor * np.abs(Ymin)
+                Xdiff_small = np.abs(Xdiff) < 0.75 * np.abs(Xmin)
+                Ydiff_small = np.abs(Ydiff) < 0.75 * np.abs(Ymin)
                 eddy_no_horseshoe = tmp_no_horseshoe & Xdiff_small & Ydiff_small
             else:
                 eddy_no_horseshoe = True
