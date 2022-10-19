@@ -535,12 +535,12 @@ def eddy_is_near(track, trac_param, un_items, range_un_items, rossrad):
             d_in_circle = trac_param['search_dist'] * 1e3  # [m]
     # Find all eddy centroids in search region at time tt
     if not trac_param['search_circle']:
-        is_near = is_in_ellipse(x0, y0,
+        is_near = is_in_ellipse(trac_param, x0, y0,
                                 dE_in_ellipse,
                                 d_in_ellipse,
                                 tmp_lon, tmp_lat)
     elif trac_param['search_circle']:
-        is_near = is_in_circle(x0, y0,
+        is_near = is_in_circle(trac_param, x0, y0,
                                d_in_circle,
                                tmp_lon, tmp_lat)
     return is_near, x0, y0
