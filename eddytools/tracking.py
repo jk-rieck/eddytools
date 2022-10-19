@@ -718,11 +718,10 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
 
             if possibles.sum() > 0:
                 # Of all found eddies, accept only the nearest one
-                dist = np.array(
-                    [np.sqrt((x0 - un_items[i]['lon']) ** 2
-                     + (y0 - un_items[i]['lat']) ** 2)
-                     for i in range_un_items])
-                nearest = int(np.where(dist == np.min(dist))[0])
+                dist = [np.sqrt((x0 - un_items[i]['lon']) ** 2
+                        + (y0 - un_items[i]['lat']) ** 2)
+                        for i in range_un_items]
+                nearest = dist.index(dist.min())
                 nearest_eddy = is_near_index[is_similar_index[
                                    is_same_type_index[nearest]]]
                 next_eddy = unassigned[nearest_eddy]
