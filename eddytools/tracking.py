@@ -97,7 +97,7 @@ def calculate_d(dE, lon, lat, rossrad, dt):
     return d
 
 
-def get_distance(lon1, lat1, lon2, lat2):
+def get_distance_latlon2m(lon1, lat1, lon2, lat2):
     '''Get the distance in km between two points (lon1, lat1) and (lon2, lat2)
     based on longitude and latitude.
     We use the haversine approach which assumes the Earth is a sphere and can
@@ -132,10 +132,10 @@ def get_distance(lon1, lat1, lon2, lat2):
     a = ((np.sin(dlat / 2.) ** 2.) + np.cos(lat1)
          * np.cos(lat2) * (np.sin(dlon / 2.) ** 2.))
     c = 2 * np.arcsin(np.sqrt(a))
-    return R * c
+    return R * c * 1e3
 
 
-def is_in_ellipse(x0, y0, dE, d, x, y):
+def is_in_ellipse(trac_param, x0, y0, dE, d, x, y):
     '''Check if point (x,y) is contained in ellipse given by the equation
 
       (x-x1)**2     (y-y1)**2
@@ -151,6 +151,48 @@ def is_in_ellipse(x0, y0, dE, d, x, y):
 
     Parameters
     ----------
+    trac_param : dict
+        Dictionary with all the parameters needed for the eddy-tracking.
+        The parameters are:
+        trac_param = {
+            'model': 'model_name', # either ORCA or MITgcm
+            'grid': 'latlon', # either latlon or cartesian
+            'start_time': 'YYYY-MM-DD', # time range start
+            'end_time': 'YYYY-MM-DD', # time range end
+            'calendar': 'standard', # calendar, must be either 360_day or
+                                    # standard
+            'dt': 5, # time step of the original fields
+            'lon1': -180, # minimum longitude of detection region, either in
+                          # the range (-180, 180) degrees or in m for a
+                          # cartesian grid
+            'lon2': -130, # maximum longitude of detection region, either
+                          # (-180, 180) degrees or m
+            'lat1': -55, # minimum latitude of detection region, either
+                          # (-90, 90) degrees or m
+            'lat2': -30, # maximum latitude of detection region, either
+                          # (-90, 90) degrees or m
+            'search_dist': 0., # maximum distance of search ellipse/circle from
+                               # eddy center
+                               # if ellipse: towards the east (if set to 0, it
+                               # will be calculated as (150. / (7. / dt)))
+            'search_circle': False, # if True, search in a circle. otherwise
+                                    # use ellipse
+            'eddy_scale_min': 0.75, # minimum factor by which eddy amplitude
+                                    # and area can change in one timestep
+            'eddy_scale_max': 1.5, # maximum factor by which eddy amplitude
+                                   # and area can change in one timestep
+            'dict': 0, # dictionary containing detected eddies to be used when
+                       # not stored in files (set to 0 otherwise)
+            'data_path': datapath, # path to the detected eddies pickle files
+            'file_root': 'test', # root name of the files, usually CONF-EXP etc.
+            'file_spec': 'eddies_OW0.3', # part of the file name following the
+                                         # datestring
+            # the resulting file name that will be searched for is then
+            # data_path+file_root+_+datestring+_+file_spec+.pickle
+            # datestring will be defined inside the function
+            'ross_path': datapath + '/' # path to rossrad.dat containing
+                                        # Chelton et al. 1998 Rossby radii
+            }
     x0 : float
         Eddy center lon at timestep t-1.
     y0 : float
@@ -170,8 +212,13 @@ def is_in_ellipse(x0, y0, dE, d, x, y):
         Boolean vector of length len(x)=len(y). True when (x,y) is
         inside the ellipsis
     '''
+    # convert to degress lon./lat. in case of latlon grid
+    if trac_param['grid'] == 'latlon':
+        l = len_deg_lon(y)
+        d /= l
+        dE /= l
     # minimum western extend is dE
-    dW = max([d, dE])
+    dW = np.max(np.vstack((d, dE)), axis=0)
 
     b = dE  # minor axis
     a = 0.5 * (dE + dW)  # major axis
@@ -183,12 +230,54 @@ def is_in_ellipse(x0, y0, dE, d, x, y):
     return elli
 
 
-def is_in_circle(x0, y0, d, x, y):
+def is_in_circle(trac_param, x0, y0, d, x, y):
     '''Check if point (x,y) is contained in circle with radiues d (in km)
     around point (x0, y0)
 
     Parameters
     ----------
+    trac_param : dict
+        Dictionary with all the parameters needed for the eddy-tracking.
+        The parameters are:
+        trac_param = {
+            'model': 'model_name', # either ORCA or MITgcm
+            'grid': 'latlon', # either latlon or cartesian
+            'start_time': 'YYYY-MM-DD', # time range start
+            'end_time': 'YYYY-MM-DD', # time range end
+            'calendar': 'standard', # calendar, must be either 360_day or
+                                    # standard
+            'dt': 5, # time step of the original fields
+            'lon1': -180, # minimum longitude of detection region, either in
+                          # the range (-180, 180) degrees or in m for a
+                          # cartesian grid
+            'lon2': -130, # maximum longitude of detection region, either
+                          # (-180, 180) degrees or m
+            'lat1': -55, # minimum latitude of detection region, either
+                          # (-90, 90) degrees or m
+            'lat2': -30, # maximum latitude of detection region, either
+                          # (-90, 90) degrees or m
+            'search_dist': 0., # maximum distance of search ellipse/circle from
+                               # eddy center
+                               # if ellipse: towards the east (if set to 0, it
+                               # will be calculated as (150. / (7. / dt)))
+            'search_circle': False, # if True, search in a circle. otherwise
+                                    # use ellipse
+            'eddy_scale_min': 0.75, # minimum factor by which eddy amplitude
+                                    # and area can change in one timestep
+            'eddy_scale_max': 1.5, # maximum factor by which eddy amplitude
+                                   # and area can change in one timestep
+            'dict': 0, # dictionary containing detected eddies to be used when
+                       # not stored in files (set to 0 otherwise)
+            'data_path': datapath, # path to the detected eddies pickle files
+            'file_root': 'test', # root name of the files, usually CONF-EXP etc.
+            'file_spec': 'eddies_OW0.3', # part of the file name following the
+                                         # datestring
+            # the resulting file name that will be searched for is then
+            # data_path+file_root+_+datestring+_+file_spec+.pickle
+            # datestring will be defined inside the function
+            'ross_path': datapath + '/' # path to rossrad.dat containing
+                                        # Chelton et al. 1998 Rossby radii
+            }
     x0 : float
         Eddy center lon at timestep t-1.
     y0 : float
@@ -205,7 +294,10 @@ def is_in_circle(x0, y0, d, x, y):
         Boolean vector of length len(x)=len(y). True when (x,y) is
         inside the circl
     '''
-    dist = get_distance(x0, y0, x, y)
+    if trac_param['grid'] == 'latlon':
+        dist = get_distance_latlon2m(x0, y0, x, y)
+    elif trac_param['grid'] == 'cartesian':
+        dist = np.sqrt((x0 - x) ** 2 + (y0 - y) ** 2)
     return np.array(dist) <= d
 
 
@@ -424,33 +516,31 @@ def eddy_is_near(track, trac_param, un_items, range_un_items, rossrad):
     x0 = track['lon'][-1]  # [deg. lon] or [m]
     y0 = track['lat'][-1]  # [deg. lat] or [m]
     tmp_lon = [un_items[i]['lon']
-               for i in range_un_items]
+               for i in range_un_items] # [deg. lon] or [m]
     tmp_lat = [un_items[i]['lat']
-               for i in range_un_items]
+               for i in range_un_items] # [deg. lat] or [m]
     if trac_param['grid'] == 'latlon':
         if not trac_param['search_circle']:
             d = calculate_d(trac_param['search_dist'], x0, y0, rossrad,
                             trac_param['dt'])  # [km]
-            len_lon = len_deg_lon(y0)
-            dE_in_ellipse = trac_param['search_dist'] / len_lon
-            d_in_ellipse = d / len_lon
+            dE_in_ellipse = trac_param['search_dist'] * 1e3 # [m]
+            d_in_ellipse = d * 1e3 # [m]
         elif trac_param['search_circle']:
-            len_lon = len_deg_lon(y0)
-            d_in_circle = trac_param['search_dist'] / len_lon
+            d_in_circle = trac_param['search_dist'] # [m]
     elif trac_param['grid'] == 'cartesian':
         if not trac_param['search_circle']:
-            dE_in_ellipse = trac_param['search_dist'] * 1e3
-            d_in_ellipse = dE_in_ellipse
+            dE_in_ellipse = trac_param['search_dist'] * 1e3  # [m]
+            d_in_ellipse = dE_in_ellipse  # [m]
         elif trac_param['search_circle']:
-            d_in_circle = trac_param['search_dist'] * 1e3
+            d_in_circle = trac_param['search_dist'] * 1e3  # [m]
     # Find all eddy centroids in search region at time tt
     if not trac_param['search_circle']:
-        is_near = is_in_ellipse(x0, y0,
+        is_near = is_in_ellipse(trac_param, x0, y0,
                                 dE_in_ellipse,
                                 d_in_ellipse,
                                 tmp_lon, tmp_lat)
     elif trac_param['search_circle']:
-        is_near = is_in_circle(x0, y0,
+        is_near = is_in_circle(trac_param, x0, y0,
                                d_in_circle,
                                tmp_lon, tmp_lat)
     return is_near, x0, y0
