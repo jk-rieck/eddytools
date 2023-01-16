@@ -378,7 +378,7 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
             # Interpolate on regular grid using the xesmf Regridder
             # For grids that have similar resolutions, method could be changed
             # to 'nearest_s2d', which is quicker and might be sufficient....
-            regridder = xe.Regridder(mask_to_int.to_dataset().drop(mask),
+            regridder = xe.Regridder(mask_to_int.drop(mask).to_dataset(),
                                      rect_grid,
                                      method=regrid_method,
                                      extrap_method=ext_method,
