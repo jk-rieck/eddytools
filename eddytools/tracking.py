@@ -1048,10 +1048,10 @@ def track(tracking_params, in_file=True):
     # Now remove all tracks of length 1 from `tracks` (a track is only
     # considered as such, if the eddy can be tracked over at least 2
     # consecutive time steps)
-    tracks_dict = {}
+    tracks_list = []
     td_index = 0
     for ed in np.arange(0, len(tracks)):
         if len(tracks[ed]['lon']) > 1:
-            tracks_dict[td_index] = tracks[ed]
+            tracks_list.append(tracks[ed])
             td_index = td_index + 1
-    return tracks_dict
+    return tracks_list
