@@ -299,6 +299,7 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
         # and extract only the time slice wanted
         var_to_int = data[var].sel({t: slice(int_param['start_time'],
                                              int_param['end_time'])})
+        var_to_int = var_to_int.astype(float)
         # Define how longitude and latitude coordinates are called in the
         # original dataset to rename them later
         if o:
@@ -365,7 +366,7 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
         int_param['mask_to_interpolate'].extend([e2f])
     for mask in int_param['mask_to_interpolate']:
         # Loop through all the masks specified for interpolation
-        mask_to_int = data[mask]
+        mask_to_int = data[mask].astype(float)
         # Define how longitude and latitude coordinates are called in the
         # original dataset to rename them later
         if o:
