@@ -649,7 +649,7 @@ def eddy_is_same_type(track, un_items, range_un_items):
     return is_same_type
 
 
-def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
+def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
     '''Core function for the tracking of eddies detected with `detection.py`.
 
     Parameters
@@ -700,8 +700,8 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
             'ross_path': datapath + '/' # path to rossrad.dat containing
                                         # Chelton et al. 1998 Rossby radii
             }
-    terminated_list : list
-        List of all indeces of eddy tracks that have been terminated.
+    terminated_set : set
+        Set of all indeces of eddy tracks that have been terminated.
     rossrad : dict
         Dictionary containing the 2D (lat, lon) first baroclinic Rossby
         radius 'rossby_rad', the first baroclinic wave speed 'c1' and
@@ -712,16 +712,16 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
     Appends to global variables `tracks` and `terminated_list`.
     '''
     # Now, none of the eddies in `det_eddies` have been assigned to a track.
-    unassigned = list(range(len(det_eddies)))
+    unassigned = [i for i in range(len(det_eddies))]
 
     # For each existing eddy (t<tt) that has not been terminated, loop through
     # the unassigned eddies and assign to existing eddy if appropriate
     #
     # First we construct a list of all existing eddies
-    eddy_list = list(range(len(tracks)))
+    eddy_set = set(i for i in range(len(tracks)))
     # Now we remove all terminated eddies from that list
-    [eddy_list.remove(terminated_list[i]) for i in range(len(terminated_list))]
-    for ed in eddy_list:
+    eddy_set = eddy_set - terminated_set
+    for ed in eddy_set:
         # Check if eddy has already been terminated (just a safety measure,
         # terminated eddies should not be in `eddy_list` any more...)
         if not tracks[ed]['terminated']:
@@ -754,7 +754,7 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
                 # If no eddy is near, terminate the track, append index to
                 # `terminated_list` and jump to next eddy.
                 tracks[ed]['terminated'] = True
-                terminated_list.append(ed)
+                terminated_set.add(ed)
                 continue
 
             # Test whether any eddies in `un_items` are similar to `tracks[ed]`
@@ -777,7 +777,7 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
                 # If no eddy is similar, terminate the track, append index to
                 # `terminated_list` and jump to next eddy.
                 tracks[ed]['terminated'] = True
-                terminated_list.append(ed)
+                terminated_set.add(ed)
                 continue
 
             # Test whether any eddies in `un_items` are the same type as
@@ -799,7 +799,7 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
                 # If no eddy is of the same type, terminate the track, append
                 # index to `terminated_list` and jump to next eddy
                 tracks[ed]['terminated'] = True
-                terminated_list.append(ed)
+                terminated_set.add(ed)
                 continue
 
             # Possible eddies are those which are near, of the right
@@ -841,7 +841,7 @@ def track_core(det_eddies, tracks, trac_param, terminated_list, rossrad):
             # Terminate eddy if no possible candidate is found
             else:
                 tracks[ed]['terminated'] = True
-                terminated_list.append(ed)
+                terminated_set.add(ed)
     if len(unassigned) > 0:
         # If there are unassigned eddies left after looping through all tracks,
         # then make them the start of a new track.
@@ -940,7 +940,7 @@ def track(tracking_params, in_file=True):
     # Preparation with `prepare()`
     eddies_time, rossrad, trac_param = prepare(tracking_params)
     # Initialize `tracks` with all eddies at t=0
-    terminated_list = []
+    terminated_set = set()
     tracks = []
     if in_file:
         t = 0
@@ -1026,8 +1026,7 @@ def track(tracking_params, in_file=True):
         if terminate_all:
             for ed in range(len(tracks)):
                 tracks[ed]['terminated'] = True
-                terminated_list.append(ed)
-            terminated_list = list(set(terminated_list))
+                terminated_set.add(ed)
             continue
         # Loop through all time steps in `det_eddies`
         if in_file:
@@ -1038,12 +1037,12 @@ def track(tracking_params, in_file=True):
                       'rb') as f:
                 det_eddies = pickle.load(f)
                 track_core(det_eddies, tracks, trac_param,
-                           terminated_list, rossrad)
+                           terminated_set, rossrad)
             f.close()
         else:
             det_eddies = trac_param['dict'][tt]
             track_core(det_eddies, tracks, trac_param,
-                       terminated_list, rossrad)
+                       terminated_set, rossrad)
         terminate_all = False
     # Now remove all tracks of length 1 from `tracks` (a track is only
     # considered as such, if the eddy can be tracked over at least 2
