@@ -712,13 +712,13 @@ def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
     Appends to global variables `tracks` and `terminated_list`.
     '''
     # Now, none of the eddies in `det_eddies` have been assigned to a track.
-    unassigned = set(range(len(det_eddies)))
+    unassigned = [i for i in range(len(det_eddies))]
 
     # For each existing eddy (t<tt) that has not been terminated, loop through
     # the unassigned eddies and assign to existing eddy if appropriate
     #
     # First we construct a list of all existing eddies
-    eddy_set = set(range(len(tracks)))
+    eddy_set = set(i for i in range(len(tracks)))
     # Now we remove all terminated eddies from that list
     eddy_set = eddy_set - terminated_set
     for ed in eddy_set:
