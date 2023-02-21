@@ -14,6 +14,7 @@ import pandas as pd
 import xarray as xr
 import pickle
 import cftime as cft
+from glob import glob
 
 
 def load_rossrad(input_path):
@@ -948,11 +949,11 @@ def track(tracking_params, in_file=True):
         while didntwork:
             try:
                 firstdate = str(eddies_time[t])[0:10]
-                os.path.isfile(trac_param['data_path']
+                os.path.isfile(glob(trac_param['data_path']
                                + trac_param['file_root'] + '_'
                                + str(firstdate) + '_'
                                + trac_param['file_spec']
-                               + '.pickle')
+                               + '.pickle')[0])
                 didntwork = False
             except:
                 t += 1
@@ -963,9 +964,9 @@ def track(tracking_params, in_file=True):
             print('no eddies found to track')
             return
         datestring = firstdate
-        with open(trac_param['data_path'] + trac_param['file_root'] + '_'
+        with open(glob(trac_param['data_path'] + trac_param['file_root'] + '_'
                   + str(firstdate) + '_' + trac_param['file_spec']
-                  + '.pickle',
+                  + '.pickle')[0],
                   'rb') as f:
             det_eddies = pickle.load(f)
             for ed in np.arange(0, len(det_eddies) - 1):
@@ -1009,11 +1010,11 @@ def track(tracking_params, in_file=True):
                   len(eddies_time))
         if in_file:
             nextdate = str(eddies_time[tt])[0:10]
-            file_found = os.path.isfile(trac_param['data_path']
+            file_found = os.path.isfile(glob(trac_param['data_path']
                              + trac_param['file_root'] + '_'
                              + str(nextdate) + '_'
                              + trac_param['file_spec']
-                             + '.pickle')
+                             + '.pickle')[0])
             if file_found:
                 terminate_all = False
             else:
@@ -1031,9 +1032,9 @@ def track(tracking_params, in_file=True):
         # Loop through all time steps in `det_eddies`
         if in_file:
             datestring = str(eddies_time[tt])[0:10]
-            with open(trac_param['data_path'] + trac_param['file_root'] + '_'
-                      + str(datestring) + '_' + trac_param['file_spec']
-                      + '.pickle',
+            with open(glob(trac_param['data_path'] + trac_param['file_root']
+                      + '_' + str(datestring) + '_' + trac_param['file_spec']
+                      + '.pickle')[0],
                       'rb') as f:
                 det_eddies = pickle.load(f)
                 track_core(det_eddies, tracks, trac_param,
