@@ -319,7 +319,7 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                       'type': str, # 'cyclonic' or 'anticyclonic'
                       'lon': array, # central longitude
                       'lat': array, # central latitude
-                      'scale': array, # diameter of the eddy
+                      'scale': array, # ~radius of the eddy
                       'area': array, # area of the eddy
                       'amp': array, # vorticity amplitude
                       'eddy_i': array, # i-indeces of the eddy
@@ -760,7 +760,7 @@ def detect_OW(data, det_param, ow_var, vort_var,
                           'type': str, # 'cyclonic' or 'anticyclonic'
                           'lon': array, # central longitude
                           'lat': array, # central latitude
-                          'scale': array, # diameter of the eddy
+                          'scale': array, # ~radius of the eddy
                           'area': array, # area of the eddy
                           'amp': array, # vorticity amplitude
                           'eddy_i': array, # i-indeces of the eddy
@@ -953,7 +953,7 @@ def detect_SSH(data, det_param, ssh_var,
                           'type': str, # 'cyclonic' or 'anticyclonic'
                           'lon': array, # central longitude
                           'lat': array, # central latitude
-                          'scale': array, # diameter of the eddy
+                          'scale': array, # ~radius of the eddy
                           'area': array, # area of the eddy
                           'amp': array, # vorticity amplitude
                           'eddy_i': array, # i-indeces of the eddy

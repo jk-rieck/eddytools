@@ -43,7 +43,7 @@ def add_fields(sampled, interpolated, sample_param, var, lon1, lat1):
                           # (-90, 90) degrees or m
             'type': 'anticyclonic', # type of eddy
             'lifetime': 20, # length of the eddy's track in days
-            'size': 20, # eddy size (diameter in km)
+            'size': 20, # eddy size (radius in km)
             'd_surr' : 1 # Distance from eddy edge to take into account for the
                          # computation of the eddy's average surroundings. Unit
                          # is eddy radii.
@@ -276,7 +276,7 @@ def write_to_netcdf(file_name, sample, sample_param, data):
                           # (-90, 90) degrees or m
             'type': 'anticyclonic', # type of eddy
             'lifetime': 20, # length of the eddy's track in days
-            'size': 20, # eddy size (diameter in km)
+            'size': 20, # eddy size (radius in km)
             'd_surr' : 1 # Distance from eddy edge to take into account for the
                          # computation of the eddy's average surroundings. Unit
                          # is eddy radii.
@@ -476,7 +476,7 @@ def sample_core(track, data, data_whole, sample_param, i, j,
                           # (-90, 90) degrees or m
             'type': 'anticyclonic', # type of eddy
             'lifetime': 20, # length of the eddy's track in days
-            'size': 20, # eddy size (diameter in km)
+            'size': 20, # eddy size (radius in km)
             'd_surr' : 1 # Distance from eddy edge to take into account for the
                          # computation of the eddy's average surroundings. Unit
                          # is eddy radii.
@@ -709,7 +709,7 @@ def prepare(data_in, sample_param, tracks):
                           # (-90, 90) degrees or m
             'type': 'anticyclonic', # type of eddy
             'lifetime': 20, # length of the eddy's track in days
-            'size': 20, # eddy size (diameter in km)
+            'size': 20, # eddy size (radius in km)
             'd_surr' : 1 # Distance from eddy edge to take into account for the
                          # computation of the eddy's average surroundings. Unit
                          # is eddy radii.
@@ -847,7 +847,7 @@ def sample(tracks, data, sample_param):
                           # (-90, 90) degrees or m
             'type': 'anticyclonic', # type of eddy
             'lifetime': 20, # length of the eddy's track in days
-            'size': 20, # eddy size (diameter in km)
+            'size': 20, # eddy size (radius in km)
             'd_surr' : 1 # Distance from eddy edge to take into account for the
                          # computation of the eddy's average surroundings. Unit
                          # is eddy radii.
