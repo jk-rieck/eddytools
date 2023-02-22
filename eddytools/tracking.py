@@ -930,7 +930,7 @@ def track(tracking_params, in_file=True):
                       'type': str, # 'cyclonic' or 'anticyclonic'
                       'lon': array, # central longitude
                       'lat': array, # central latitude
-                      'scale': array, # diameter of the eddy
+                      'scale': array, # ~radius of the eddy
                       'area': array, # area of the eddy
                       'amp': array, # amplitude
                       'eddy_i': array, # i-indeces of the eddy
