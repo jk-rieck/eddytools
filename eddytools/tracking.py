@@ -319,7 +319,7 @@ def len_deg_lon(lat):
 
     R = 6371.  # Radius of Earth [km]
 
-    lenlon = (np.pi / 180.) * R * np.cos(lat * np.pi/180.)
+    lenlon = (np.pi / 180.) * R * np.cos(np.array(lat) * np.pi/180.)
     return lenlon
 
 
