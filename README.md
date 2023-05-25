@@ -11,7 +11,7 @@ The package works based on output loaded with  `load_xorca_dataset` from the [xo
 
 ~~~bash
 # clone the git repository
-git clone git@github.com:jk-rieck/eddytools.git
+git clone https://github.com/jk-rieck/eddytools.git
 cd eddytools
 # create and activate the environment
 conda env create -f environment.yml
