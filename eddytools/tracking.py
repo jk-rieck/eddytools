@@ -836,7 +836,8 @@ def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
                     det_eddies[next_eddy]['eddy_i']
                 tracks[ed]['eddy_j'][len(tracks[ed]['eddy_j'])] =\
                     det_eddies[next_eddy]['eddy_j']
-                tracks[ed]['eddy_num']= next_eddy
+                tracks[ed]['eddy_num']= np.append(
+                    tracks[ed]['eddy_num'], next_eddy)
                 # Remove detected eddy from list of eddies available for
                 # assigment to existing trajectories
                 unassigned.remove(next_eddy)
@@ -858,7 +859,7 @@ def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
             tmp_track['eddy_j'] = {}
             tmp_track['eddy_i'][0] = np.array(det_eddies[un]['eddy_i'])
             tmp_track['eddy_j'][0] = np.array(det_eddies[un]['eddy_j'])
-            tmp_track['eddy_num']= un
+            tmp_track['eddy_num']= np.array([un])
             tmp_track['type'] = det_eddies[un]['type']
             tmp_track['time'] = det_eddies[un]['time']
             tmp_track['exist_at_start'] = False
@@ -979,7 +980,7 @@ def track(tracking_params, in_file=True):
                 tracks[ed]['eddy_j'] = {}
                 tracks[ed]['eddy_i'][0] = det_eddies[ed]['eddy_i']
                 tracks[ed]['eddy_j'][0] = det_eddies[ed]['eddy_j']
-                tracks[ed]['eddy_num'] = ed
+                tracks[ed]['eddy_num'] = np.array([ed])
         f.close()
     else:
         t = 0
@@ -1005,7 +1006,7 @@ def track(tracking_params, in_file=True):
             tracks[ed]['eddy_j'] = {}
             tracks[ed]['eddy_i'][0] = det_eddies[ed]['eddy_i']
             tracks[ed]['eddy_j'][0] = det_eddies[ed]['eddy_j']
-            tracks[ed]['eddy_num'] = ed
+            tracks[ed]['eddy_num'] = np.array([ed])
     terminate_all = False
     for tt in np.arange(t + 1, len(eddies_time)):
         steps = np.around(np.linspace(0, len(eddies_time), 10))
