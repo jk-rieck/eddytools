@@ -140,11 +140,20 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
         end_time = cft.Datetime360Day(int(int_param['end_time'][0:4]),
                                       int(int_param['end_time'][5:7]),
                                       int(int_param['end_time'][8:10]))
-    if (start_time > data[dat_time][-1]
-        or end_time < data[dat_time][0]):
-        raise ValueError('`int_param`: there is no overlap of the original time'
-                         + ' axis and the desired time range for the'
-                         + ' interpolated data')
+    try:
+        if (start_time > data[dat_time][-1]
+            or end_time < data[dat_time][0]):
+            raise ValueError('`int_param`: there is no overlap of the original time'
+                             + ' axis and the desired time range for the'
+                             + ' interpolated data')
+    except TypeError:
+        if (start_time > data[dat_time].to_datetimeindex()[-1]
+            or end_time < data[dat_time].to_datetimeindex()[0]):
+            raise ValueError('`int_param`: there is no overlap of the original time'
+                             + ' axis and the desired time range for the'
+                             + ' interpolated data')
+        
+        
     # Define the names of the variables in the corresponding model/grid
     # combination. Then add 2 degrees (ORCA) or 200km (MITgcm) in longitude and
     # 1 degree (ORCA) or 100km (MITgcm) in latitude in every direction of the
