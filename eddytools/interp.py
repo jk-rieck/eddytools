@@ -140,7 +140,7 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
         end_time = cft.Datetime360Day(int(int_param['end_time'][0:4]),
                                       int(int_param['end_time'][5:7]),
                                       int(int_param['end_time'][8:10]))
-    elif int_param['calendar'] == '360_day':
+    elif int_param['calendar'] == 'NoLeap':
         start_time = cft.datetime(int(int_param['start_time'][0:4]),
                                         int(int_param['start_time'][5:7]),
                                         int(int_param['start_time'][8:10]), calendar=u'365_day')
