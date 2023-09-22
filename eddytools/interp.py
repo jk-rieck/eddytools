@@ -140,7 +140,7 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
         end_time = cft.Datetime360Day(int(int_param['end_time'][0:4]),
                                       int(int_param['end_time'][5:7]),
                                       int(int_param['end_time'][8:10]))
-    elif int_param['calendar'] == 'NoLeap':
+    elif int_param['calendar'] == 'NoLeap': # NP: add NoLeap Calendar for CREG
         start_time = cft.datetime(int(int_param['start_time'][0:4]),
                                         int(int_param['start_time'][5:7]),
                                         int(int_param['start_time'][8:10]), calendar=u'365_day')
@@ -209,6 +209,7 @@ def horizontal(data, metrics, int_param, weights=None, avoid_regrid=False):
     elif latlon:
         # If longitudes at one index i are all the same, the grid is assumed
         # to be regular and we do not need to regrid
+        # NP: add the criteria that longitude should not be zero to deal with CREG grid of the Arctic. 
         if ((np.diff(data[llon_cc][:, 0]) == 0).all()
             & (np.diff(data[llon_cc][:, 1]) == 0).all()):
             print('No regridding necessary,'

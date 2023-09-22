@@ -711,7 +711,7 @@ def detect_OW(data, det_param, ow_var, vort_var,
             'start_time': 'YYYY-MM-DD', # time range start
             'end_time': 'YYYY-MM-DD', # time range end
             'calendar': 'standard', # calendar, must be either 360_day or
-                                    # standard
+                                    # standard or NoLeap
             'lon1': -180, # minimum longitude of detection region, either in
                           # the range (-180, 180) degrees or in m for a
                           # cartesian grid
@@ -792,6 +792,13 @@ def detect_OW(data, det_param, ow_var, vort_var,
         end_time = cft.Datetime360Day(int(det_param['end_time'][0:4]),
                                       int(det_param['end_time'][5:7]),
                                       int(det_param['end_time'][8:10]))
+    elif int_param['calendar'] == 'NoLeap': # NP: add NoLeap Calendar for CREG
+        start_time = cft.datetime(int(int_param['start_time'][0:4]),
+                                        int(int_param['start_time'][5:7]),
+                                        int(int_param['start_time'][8:10]), calendar=u'365_day')
+        end_time = cft.datetime(int(int_param['end_time'][0:4]),
+                                      int(int_param['end_time'][5:7]),
+                                      int(int_param['end_time'][8:10]), calendar=u'365_day')
     if (start_time > data['time'][-1]
         or end_time < data['time'][0]):
         raise ValueError('`det_param`: there is no overlap of the original time'
