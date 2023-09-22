@@ -792,13 +792,13 @@ def detect_OW(data, det_param, ow_var, vort_var,
         end_time = cft.Datetime360Day(int(det_param['end_time'][0:4]),
                                       int(det_param['end_time'][5:7]),
                                       int(det_param['end_time'][8:10]))
-    elif int_param['calendar'] == 'NoLeap': # NP: add NoLeap Calendar for CREG
-        start_time = cft.datetime(int(int_param['start_time'][0:4]),
-                                        int(int_param['start_time'][5:7]),
-                                        int(int_param['start_time'][8:10]), calendar=u'365_day')
-        end_time = cft.datetime(int(int_param['end_time'][0:4]),
-                                      int(int_param['end_time'][5:7]),
-                                      int(int_param['end_time'][8:10]), calendar=u'365_day')
+    elif det_param['calendar'] == 'NoLeap': # NP: add NoLeap Calendar for CREG
+        start_time = cft.datetime(int(det_param['start_time'][0:4]),
+                                        int(det_param['start_time'][5:7]),
+                                        int(det_param['start_time'][8:10]), calendar=u'365_day')
+        end_time = cft.datetime(int(det_param['end_time'][0:4]),
+                                      int(det_param['end_time'][5:7]),
+                                      int(det_param['end_time'][8:10]), calendar=u'365_day')
     if (start_time > data['time'][-1]
         or end_time < data['time'][0]):
         raise ValueError('`det_param`: there is no overlap of the original time'
