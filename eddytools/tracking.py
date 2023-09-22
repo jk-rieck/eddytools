@@ -426,6 +426,8 @@ def prepare(trac_param):
         calendar_to_use = 'noleap'
     elif trac_param['calendar'] == '360_day':
         calendar_to_use = '360_day'
+    elif trac_param['calendar'] == 'NoLeap': #NP : correction ? 
+        calendar_to_use = '365_day'
     eddies_time_range = xr.cftime_range(
         start=trac_param['start_time'] + ' ' + time_hours,
         end=trac_param['end_time'] + ' ' + time_hours,
