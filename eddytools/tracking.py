@@ -340,7 +340,8 @@ def prepare(trac_param):
             'start_time': 'YYYY-MM-DD', # time range start
             'end_time': 'YYYY-MM-DD', # time range end
             'calendar': 'standard', # calendar, must be either 360_day or
-                                    # standard
+                                    # standard or NoLeap or Personnel
+            'dates_of_detection': None #should be None (or anythong), but can be a list of times if Personnel is specified above
             'dt': 5, # time step of the original fields
             'lon1': -180, # minimum longitude of detection region, either in
                           # the range (-180, 180) degrees or in m for a
@@ -428,23 +429,32 @@ def prepare(trac_param):
         calendar_to_use = '360_day'
     elif trac_param['calendar'] == 'NoLeap': #NP : correction ? 
         calendar_to_use = '365_day'
-    eddies_time_range = xr.cftime_range(
-        start=trac_param['start_time'] + ' ' + time_hours,
-        end=trac_param['end_time'] + ' ' + time_hours,
-        calendar=calendar_to_use,
-        freq=str(trac_param['dt']) + 'D')
-    # Now we take care of the leap years.
-    eddies_time = list(np.zeros(len(eddies_time_range)))
-    for tt in np.arange(0, len(eddies_time_range)):
-        if (is_leap_year(eddies_time_range[tt].year)
-            # If the current year is a leap year, change Feb. 27 to Feb. 28.
-            & (eddies_time_range[tt].month == 2)
-            & (eddies_time_range[tt].day == 27)
-            & (trac_param['model'] == 'ORCA')):
-            eddies_time[tt] = (str(eddies_time_range[tt].year)
-                               + '-02-28 00:00:00')
-        else:
-            eddies_time[tt] = str(eddies_time_range[tt])
+    #NP : I add the possibility to have a non-regular calendar to deal with G12 mensual, which has data on the 15 or 16 depending on the month. In that case, the user can specify himself a list of dates in the format of str. 
+    if trac_param['calendar']=='standard' or trac_param['calendar']=='360_day' or trac_param['calendar']=='NoLeap':
+        eddies_time_range = xr.cftime_range(
+            start=trac_param['start_time'] + ' ' + time_hours,
+            end=trac_param['end_time'] + ' ' + time_hours,
+            calendar=calendar_to_use,
+            freq=str(trac_param['dt']) + 'D')
+        # Now we take care of the leap years.
+        if not calendar_to_use =='NoLeap':
+            eddies_time = list(np.zeros(len(eddies_time_range)))
+            for tt in np.arange(0, len(eddies_time_range)):
+                if (is_leap_year(eddies_time_range[tt].year)
+                    # If the current year is a leap year, change Feb. 27 to Feb. 28.
+                    & (eddies_time_range[tt].month == 2)
+                    & (eddies_time_range[tt].day == 27)
+                    & (trac_param['model'] == 'ORCA')):
+                    eddies_time[tt] = (str(eddies_time_range[tt].year)
+                                       + '-02-28 00:00:00')
+                else:
+                    eddies_time[tt] = str(eddies_time_range[tt])
+        elif calendar_to_use=='NoLeap':
+            eddies_time = list(np.zeros(len(eddies_time_range)))
+            for tt in np.arange(0, len(eddies_time_range)):
+                eddies_time[tt] = str(eddies_time_range[tt])
+    elif trac_param['calendar']=='Personnel':
+        eddies_time = trac_param['dates_of_detection']
     return eddies_time, rossrad, t_p
 
 
