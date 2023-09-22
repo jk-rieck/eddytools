@@ -453,9 +453,10 @@ def prepare(trac_param):
             eddies_time = list(np.zeros(len(eddies_time_range)))
             for tt in np.arange(0, len(eddies_time_range)):
                 eddies_time[tt] = str(eddies_time_range[tt])
+                
     elif trac_param['calendar']=='Personnel':
         eddies_time = trac_param['dates_of_detection']
-    print(eddies_time) # NP_debug
+        
     return eddies_time, rossrad, t_p
 
 
