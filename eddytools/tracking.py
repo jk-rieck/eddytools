@@ -456,7 +456,7 @@ def prepare(trac_param):
                 
     elif trac_param['calendar']=='Personnel':
         eddies_time = trac_param['dates_of_detection']
-        
+    print(eddies_time) #NP_debug
     return eddies_time, rossrad, t_p
 
 
