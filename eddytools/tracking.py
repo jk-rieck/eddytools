@@ -429,6 +429,7 @@ def prepare(trac_param):
         calendar_to_use = '360_day'
     elif trac_param['calendar'] == 'NoLeap': #NP : correction ? 
         calendar_to_use = 'noleap'
+    print('calendar to use : ', calendar_to_use)
     #NP : I add the possibility to have a non-regular calendar to deal with G12 mensual, which has data on the 15 or 16 depending on the month. In that case, the user can specify himself a list of dates in the format of str. 
     if trac_param['calendar']=='standard' or trac_param['calendar']=='360_day' or trac_param['calendar']=='noleap':
         eddies_time_range = xr.cftime_range(
@@ -437,7 +438,7 @@ def prepare(trac_param):
             calendar=calendar_to_use,
             freq=str(trac_param['dt']) + 'D')
         # Now we take care of the leap years.
-        if not calendar_to_use =='NoLeap':
+        if not calendar_to_use =='noleap':
             eddies_time = list(np.zeros(len(eddies_time_range)))
             for tt in np.arange(0, len(eddies_time_range)):
                 if (is_leap_year(eddies_time_range[tt].year)
