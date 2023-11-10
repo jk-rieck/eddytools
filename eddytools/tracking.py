@@ -431,7 +431,7 @@ def prepare(trac_param):
         calendar_to_use = 'noleap'
     print('calendar to use : ', calendar_to_use)
     #NP : I add the possibility to have a non-regular calendar to deal with G12 mensual, which has data on the 15 or 16 depending on the month. In that case, the user can specify himself a list of dates in the format of str. 
-    if trac_param['calendar']=='standard' or trac_param['calendar']=='360_day' or trac_param['calendar']=='noleap':
+    if trac_param['calendar']=='standard' or trac_param['calendar']=='360_day' or trac_param['calendar']=='NoLeap':
         eddies_time_range = xr.cftime_range(
             start=trac_param['start_time'] + ' ' + time_hours,
             end=trac_param['end_time'] + ' ' + time_hours,
