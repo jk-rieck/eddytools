@@ -774,9 +774,9 @@ def detect_OW(data, det_param, ow_var, vort_var,
                          + 'same time. Set either `use_bags` or `use_mp`'
                          + 'to `False`.')
     # Verify that the specified region lies within the dataset provided
-    if det_param['lon1'] >360:
+    if det_param['lon1'] >180:
         det_param['lon1'] = det_param['lon1'] - 360
-    if det_param['lon2'] >360:
+    if det_param['lon2'] >180:
         det_param['lon2'] = det_param['lon2'] - 360
 
     if (det_param['lon1'] < np.around(data['lon'].min())
