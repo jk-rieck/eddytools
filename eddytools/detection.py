@@ -776,12 +776,12 @@ def detect_OW(data, det_param, ow_var, vort_var,
     # Verify that the specified region lies within the dataset provided
     if (det_param['lon1'] < np.around(data['lon'].min())
        or det_param['lon2'] > np.around(data['lon'].max())):
-        raise ValueError('`det_param`: min. and/or max. of longitude range'
-                         + ' are outside the region contained in the dataset')
+        print('`det_param`: min. and/or max. of longitude range'
+                         + ' are outside the region contained in the dataset - BE CAREFUL')
     if (det_param['lat1'] < np.around(data['lat'].min())
        or det_param['lat2'] > np.around(data['lat'].max())):
-        raise ValueError('`det_param`: min. and/or max. of latitude range'
-                         + ' are outside the region contained in the dataset')
+        print('`det_param`: min. and/or max. of latitude range'
+                         + ' are outside the region contained in the dataset - BE CAREFUL')
     if det_param['calendar'] == 'standard':
         start_time = np.datetime64(det_param['start_time'])
         end_time = np.datetime64(det_param['end_time'])
