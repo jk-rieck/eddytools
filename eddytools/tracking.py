@@ -1029,11 +1029,11 @@ def track(tracking_params, in_file=True):
                   len(eddies_time))
         if in_file:
             nextdate = str(eddies_time[tt])[0:10]
-            file_found = os.path.isfile(glob(trac_param['data_path']
+            file_found = len(glob(trac_param['data_path']
                              + trac_param['file_root'] + '_'
                              + str(nextdate) + '_'
                              + trac_param['file_spec']
-                             + '.pickle')[0])
+                             + '.pickle'))>0
             if file_found:
                 terminate_all = False
             else:
