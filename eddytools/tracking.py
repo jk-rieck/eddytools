@@ -1147,6 +1147,8 @@ def split_track(tracking_params, in_file=True, continuing=False,
     # Preparation with `prepare()`
     eddies_time, rossrad, trac_param = prepare(tracking_params)
     # Initialize `tracks` with all eddies at t=0
+    terminated_set = set()
+    tracks = []
     if continuing:
         t = 0
         if not in_file:
@@ -1242,8 +1244,7 @@ def split_track(tracking_params, in_file=True, continuing=False,
         if terminate_all:
             for ed in range(len(tracks)):
                 tracks[ed]['terminated'] = True
-                terminated_list.append(ed)
-            terminated_list = list(set(terminated_list))
+                terminated_set.add(ed)
             continue
         # Loop through all time steps in `det_eddies`
         if in_file:
@@ -1254,20 +1255,20 @@ def split_track(tracking_params, in_file=True, continuing=False,
                       'rb') as f:
                 det_eddies = pickle.load(f)
                 track_core(det_eddies, tracks, trac_param,
-                           terminated_list, rossrad)
+                           terminated_set, rossrad)
             f.close()
         else:
             det_eddies = trac_param['dict'][tt]
             track_core(det_eddies, tracks, trac_param,
-                       terminated_list, rossrad)
+                       terminated_set, rossrad)
         terminate_all = False
     # Now remove all tracks of length 1 from `tracks` (a track is only
     # considered as such, if the eddy can be tracked over at least 2
     # consecutive time steps)
-    tracks_dict = {}
+    tracks_list = []
     td_index = 0
     for ed in np.arange(0, len(tracks)):
         if len(tracks[ed]['lon']) > 1:
-            tracks_dict[td_index] = tracks[ed]
+            tracks_list.append(tracks[ed])
             td_index = td_index + 1
-    return tracks_dict, tracks, terminated_list
+    return tracks_list, tracks, terminated_set
