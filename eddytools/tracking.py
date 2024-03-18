@@ -1222,8 +1222,8 @@ def split_track(tracking_params, in_file=True, continuing=False,
     for tt in t_range:
         steps = np.around(np.linspace(0, len(eddies_time), 10))
         if tt - t_range[0] in steps:
-        print('tracking at time step ', str(tt - t_range[0] + 1),
-              ' of ', len(eddies_time))
+            print('tracking at time step ', str(tt - t_range[0] + 1),
+                  ' of ', len(eddies_time))
         if in_file:
             nextdate = str(eddies_time[tt])[0:10]
             file_found = os.path.isfile(trac_param['data_path']
