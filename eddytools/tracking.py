@@ -1058,7 +1058,7 @@ def track(tracking_params, in_file=True):
 
 
 def split_track(tracking_params, in_file=True, continuing=False,
-                tracks=[], terminated_list=[]):
+                tracks=[], terminated_set=[]):
     ''' Eddy tracking based on similarity with the possibility to split up
     the tracking into several parts.
     Parameters
@@ -1147,16 +1147,17 @@ def split_track(tracking_params, in_file=True, continuing=False,
     # Preparation with `prepare()`
     eddies_time, rossrad, trac_param = prepare(tracking_params)
     # Initialize `tracks` with all eddies at t=0
-    terminated_set = set()
-    tracks = []
     if continuing:
         t = 0
         if not in_file:
-            while (str(trac_param['dict'][t][0]['time']) != eddies_time[0]):
+             while (str(trac_param['dict'][t][0]['time'])[0:10]
+                    != eddies_time[0][0:10]):
                 t += 1
         t_range = np.arange(t, t + len(eddies_time))
         terminate_all = False
     else:
+        terminated_set = set()
+        tracks = []
         if in_file:
             t = 0
             didntwork = True
@@ -1220,9 +1221,9 @@ def split_track(tracking_params, in_file=True, continuing=False,
         t_range = np.arange(t + 1, len(eddies_time))
     for tt in t_range:
         steps = np.around(np.linspace(0, len(eddies_time), 10))
-        if tt in steps:
-            print('tracking at time step ', str(tt + 1), ' of ',
-                  len(eddies_time))
+        if tt - t_range[0] in steps:
+        print('tracking at time step ', str(tt - t_range[0] + 1),
+              ' of ', len(eddies_time))
         if in_file:
             nextdate = str(eddies_time[tt])[0:10]
             file_found = os.path.isfile(trac_param['data_path']
