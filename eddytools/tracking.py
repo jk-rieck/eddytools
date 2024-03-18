@@ -527,7 +527,7 @@ def eddy_is_near(track, trac_param, un_items, range_un_items, rossrad):
             dE_in_ellipse = trac_param['search_dist'] * 1e3 # [m]
             d_in_ellipse = d * 1e3 # [m]
         elif trac_param['search_circle']:
-            d_in_circle = trac_param['search_dist'] # [m]
+            d_in_circle = trac_param['search_dist'] * 1e3 # [m]
     elif trac_param['grid'] == 'cartesian':
         if not trac_param['search_circle']:
             dE_in_ellipse = trac_param['search_dist'] * 1e3  # [m]
