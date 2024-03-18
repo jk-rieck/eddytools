@@ -1194,8 +1194,6 @@ def split_track(tracking_params, in_file=True, continuing=False,
             f.close()
         else:
             t = 0
-            while (str(trac_param['dict'][t][0]['time']) != eddies_time[0]):
-                t += 1
             didntwork = True
             while didntwork:
                 try:
