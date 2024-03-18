@@ -1055,3 +1055,219 @@ def track(tracking_params, in_file=True):
             tracks_list.append(tracks[ed])
             td_index = td_index + 1
     return tracks_list
+
+
+def split_track(tracking_params, in_file=True, continuing=False,
+                tracks=[], terminated_list=[]):
+    ''' Eddy tracking based on similarity with the possibility to split up
+    the tracking into several parts.
+    Parameters
+    ----------
+    trac_param : dict
+        Dictionary with all the parameters needed for the eddy-tracking.
+        The parameters are:
+        trac_param = {
+            'model': 'model_name', # either ORCA or MITgcm
+            'grid': 'latlon', # either latlon or cartesian
+            'start_time': 'YYYY-MM-DD', # time range start
+            'end_time': 'YYYY-MM-DD', # time range end
+            'calendar': 'standard', # calendar, must be either 360_day or
+                                    # standard
+            'dt': 5, # time step of the original fields
+            'lon1': -180, # minimum longitude of detection region, either in
+                          # the range (-180, 180) degrees or in m for a
+                          # cartesian grid
+            'lon2': -130, # maximum longitude of detection region, either
+                          # (-180, 180) degrees or m
+            'lat1': -55, # minimum latitude of detection region, either
+                          # (-90, 90) degrees or m
+            'lat2': -30, # maximum latitude of detection region, either
+                          # (-90, 90) degrees or m
+            'dE': 0., # maximum distance of search ellipsis from eddy center
+                      # towards the east (if set to 0, it will be calculated
+                      # as (150. / (7. / dt)))
+            'eddy_scale_min': 0.75, # minimum factor by which eddy amplitude
+                                    # and area can change in one timestep
+            'eddy_scale_max': 1.5, # maximum factor by which eddy amplitude
+                                   # and area can change in one timestep
+            'dict': 0, # dictionary containing detected eddies to be used when
+                       # not stored in files (set to 0 otherwise)
+            'data_path': datapath, # path to the detected eddies pickle files
+            'file_root': 'test', # root name of the files, usually CONF-EXP etc.
+            'file_spec': 'eddies_OW0.3', # part of the file name following the
+                                         # datestring
+            # the resulting file name that will be searched for is then
+            # data_path+file_root+_+datestring+_+file_spec+.pickle
+            # datestring will be defined inside the function
+            'ross_path': datapath + '/' # path to rossrad.dat containing
+                                        # Chelton et al. 1998 Rossby radii
+            }
+    in_file : bool
+        If true, detected eddies are loaded from file with the filename
+        'trac_param['data_path'] + trac_param['file_root'] + '_'
+         + str(datestring) + '_' + trac_param['file_spec'] + '.pickle'
+         `datestring` is created from the `time` value of the eddy. If false,
+         the dictionary trac_param['dict'] will be used for tracking.
+    continuing : bool
+        If True, tracking is assumed to continue from an earlier instance of
+        tracking and the variables tracks and terminated_list need to be
+        provided. Default is False, assuming that this is the first instance of
+        tracking.
+    tracks : dict
+        If continuing is True, the `tracks` dictionary of the previous instance
+        of `split_track()` needs to be provided.
+    terminated_list : list
+        If continuing is True, the `terminated_list` list of the previous
+        instance of `split_track()` needs to be provided.
+    Returns
+    -------
+    tracks_dict : dict
+        Dictionary containing the information of tracked eddies.
+        `tracks` has the form:
+        tracks = {e: {'exist_at_start': bool, # eddy exists at t=0
+                      'terminated': bool, # eddy track terminates at t
+                      'time': array, # time stamps
+                      'type': str, # 'cyclonic' or 'anticyclonic'
+                      'lon': array, # central longitude
+                      'lat': array, # central latitude
+                      'scale': array, # diameter of the eddy
+                      'area': array, # area of the eddy
+                      'amp': array, # amplitude
+                      'eddy_i': array, # i-indeces of the eddy
+                      'eddy_j': array # j-indeces of the eddy
+                      }}
+        where `e` is the eddy number.
+    tracks : dict
+        Dictionary containing information of tracked eddies. As tracks_dict but
+        containing all eddies (even tracks that are just one time step long) to
+        enable continuation of tracking later on.
+    terminated_list : list
+        List containing the numbers of terminated tracks that is needed to continue tracking later on.
+    '''
+    # Preparation with `prepare()`
+    eddies_time, rossrad, trac_param = prepare(tracking_params)
+    # Initialize `tracks` with all eddies at t=0
+    if continuing:
+        t = 0
+        if not in_file:
+            while (str(trac_param['dict'][t][0]['time']) != eddies_time[0]):
+                t += 1
+        t_range = np.arange(t, t + len(eddies_time))
+        terminate_all = False
+    else:
+        if in_file:
+            t = 0
+            didntwork = True
+            while didntwork:
+                try:
+                    firstdate = str(eddies_time[t])[0:10]
+                    os.path.isfile(trac_param['data_path']
+                                   + trac_param['file_root'] + '_'
+                                   + str(firstdate) + '_'
+                                   + trac_param['file_spec']
+                                   + '.pickle')
+                    didntwork = False
+                except:
+                    t += 1
+                    didntwork = True
+                    if t > len(eddies_time):
+                        break
+            if didntwork:
+                print('no eddies found to track')
+                return
+            datestring = firstdate
+            with open(trac_param['data_path'] + trac_param['file_root'] + '_'
+                      + str(firstdate) + '_' + trac_param['file_spec']
+                      + '.pickle',
+                      'rb') as f:
+                det_eddies = pickle.load(f)
+                for ed in np.arange(0, len(det_eddies) - 1):
+                    tracks.append(det_eddies[ed].copy())
+                    tracks[ed]['exist_at_start'] = True
+                    tracks[ed]['terminated'] = False
+                    tracks[ed]['eddy_i'] = {}
+                    tracks[ed]['eddy_j'] = {}
+                    tracks[ed]['eddy_i'][0] = det_eddies[ed]['eddy_i']
+                    tracks[ed]['eddy_j'][0] = det_eddies[ed]['eddy_j']
+            f.close()
+        else:
+            t = 0
+            while (str(trac_param['dict'][t][0]['time']) != eddies_time[0]):
+                t += 1
+            didntwork = True
+            while didntwork:
+                try:
+                    firstdate = trac_param['dict'][t][0]['time']
+                    didntwork = False
+                except:
+                    t += 1
+                    didntwork = True
+                    if t > len(eddies_time):
+                        break
+            if didntwork:
+                print('no eddies found to track')
+                return
+            det_eddies = trac_param['dict'][t]
+            for ed in np.arange(0, len(det_eddies) - 1):
+                tracks.append(det_eddies[ed].copy())
+                tracks[ed]['exist_at_start'] = True
+                tracks[ed]['terminated'] = False
+                tracks[ed]['eddy_i'] = {}
+                tracks[ed]['eddy_j'] = {}
+                tracks[ed]['eddy_i'][0] = det_eddies[ed]['eddy_i']
+                tracks[ed]['eddy_j'][0] = det_eddies[ed]['eddy_j']
+        terminate_all = False
+        t_range = np.arange(t + 1, len(eddies_time))
+    for tt in t_range:
+        steps = np.around(np.linspace(0, len(eddies_time), 10))
+        if tt in steps:
+            print('tracking at time step ', str(tt + 1), ' of ',
+                  len(eddies_time))
+        if in_file:
+            nextdate = str(eddies_time[tt])[0:10]
+            file_found = os.path.isfile(trac_param['data_path']
+                             + trac_param['file_root'] + '_'
+                             + str(nextdate) + '_'
+                             + trac_param['file_spec']
+                             + '.pickle')
+            if file_found:
+                terminate_all = False
+            else:
+                terminate_all = True
+        else:
+            try:
+                trac_param['dict'][tt][0]['time']
+            except:
+                terminate_all = True
+        if terminate_all:
+            for ed in range(len(tracks)):
+                tracks[ed]['terminated'] = True
+                terminated_list.append(ed)
+            terminated_list = list(set(terminated_list))
+            continue
+        # Loop through all time steps in `det_eddies`
+        if in_file:
+            datestring = str(eddies_time[tt])[0:10]
+            with open(trac_param['data_path'] + trac_param['file_root'] + '_'
+                      + str(datestring) + '_' + trac_param['file_spec']
+                      + '.pickle',
+                      'rb') as f:
+                det_eddies = pickle.load(f)
+                track_core(det_eddies, tracks, trac_param,
+                           terminated_list, rossrad)
+            f.close()
+        else:
+            det_eddies = trac_param['dict'][tt]
+            track_core(det_eddies, tracks, trac_param,
+                       terminated_list, rossrad)
+        terminate_all = False
+    # Now remove all tracks of length 1 from `tracks` (a track is only
+    # considered as such, if the eddy can be tracked over at least 2
+    # consecutive time steps)
+    tracks_dict = {}
+    td_index = 0
+    for ed in np.arange(0, len(tracks)):
+        if len(tracks[ed]['lon']) > 1:
+            tracks_dict[td_index] = tracks[ed]
+            td_index = td_index + 1
+    return tracks_dict, tracks, terminated_list
