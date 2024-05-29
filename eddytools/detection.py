@@ -1048,7 +1048,7 @@ def detect_OW(data, det_param, ow_var, vort_var,
                 if len(np.shape(data[OW_thr_name])) > 1:
                     OW_thr = OW_thr.compute()
                 for t in np.arange(0, len(OW.time)):
-                    tt = str(data_int.OW['time'][t].values)[0:10]
+                    tt = str(OW['time'][t].values)[0:10]
                     steps = np.around(np.linspace(0, len(OW['time']), 10))
                     if t in steps:
                         print('detection at time step ', str(t + 1), ' of ',
@@ -1260,7 +1260,7 @@ def detect_SSH(data, det_param, ssh_var,
                 e1f = e1f.compute()
                 e2f = e2f.compute()
                 for t in np.arange(0, len(OW.time)):
-                    tt = str(data_int.OW['time'][t].values)[0:10]
+                    tt = str(OW['time'][t].values)[0:10]
                     steps = np.around(np.linspace(0, len(OW['time']), 10))
                     if t in steps:
                         print('detection at time step ', str(t + 1), ' of ',
