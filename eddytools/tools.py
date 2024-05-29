@@ -1,6 +1,6 @@
 """ tools
 
-Collection of tools to be used for in- and output of the 
+Collection of tools to be used for in- and output of the
 detection and tracking
 
 """
@@ -14,13 +14,16 @@ def dict2hdf5(eddies, outfile, time_units, calendar, has_year_zero, t_dim=False)
     eddies2hdf5 = h5py.File(outfile, 'w')
     if t_dim:
         for t in np.arange(0, len(eddies)):
-            tt = eddies[t][0]['time'].tolist().strftime()[0:10]
+            tt = str(eddies[t][0]['time'])[0:10]
             eddit = eddies2hdf5.create_group(tt)
             for e in np.arange(0, len(eddies[t])):
                 ee = str(e)
                 eddi = eddit.create_group(ee)
-                e_time = d2n(eddies[t][e]['time'], time_units,
-                             calendar=calendar, has_year_zero=has_year_zero)
+                if isinstance(eddies[t][e]['time'], np.datetime64):
+                    e_time = eddies[t][e]['time'].astype(int)
+                else:
+                    e_time = d2n(eddies[t][e]['time'], time_units,
+                                 calendar=calendar, has_year_zero=has_year_zero)
                 eddi["time"] = e_time
                 eddi["time"].attrs["calendar"] = calendar
                 eddi["time"].attrs["has_year_zero"] = has_year_zero
@@ -34,13 +37,16 @@ def dict2hdf5(eddies, outfile, time_units, calendar, has_year_zero, t_dim=False)
                 eddi['scale'] = eddies[t][e]['scale']
                 eddi['type'] = eddies[t][e]['type']
     else:
-        tt = eddies[0]['time'].tolist().strftime()[0:10]
+        tt = str(eddies[0]['time'])[0:10]
         eddit = eddies2hdf5.create_group(tt)
         for e in np.arange(0, len(eddies)):
             ee = str(e)
             eddi = eddit.create_group(ee)
-            e_time = d2n(eddies[e]['time'], time_units,
-                         calendar=calendar, has_year_zero=has_year_zero)
+            if isinstance(eddies[e]['time'], np.datetime64):
+                e_time = eddies[e]['time'].astype(int)
+            else:
+                e_time = d2n(eddies[e]['time'], time_units,
+                             calendar=calendar, has_year_zero=has_year_zero)
             eddi["time"] = e_time
             eddi["time"].attrs["calendar"] = calendar
             eddi["time"].attrs["has_year_zero"] = has_year_zero
@@ -57,6 +63,9 @@ def dict2hdf5(eddies, outfile, time_units, calendar, has_year_zero, t_dim=False)
 
 
 def hdf5time(time):
-    timeout = n2d(time[()], time.attrs["units"],
-                  calendar=time.attrs["calendar"], has_year_zero=time.attrs["has_year_zero"])
+    if isinstance(time, np.datetime64):
+        timeout = np.datetime64(int(time), 'ns')
+    else:
+        timeout = n2d(time[()], time.attrs["units"],
+                      calendar=time.attrs["calendar"], has_year_zero=time.attrs["has_year_zero"])
     return timeout
