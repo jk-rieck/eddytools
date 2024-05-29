@@ -11,6 +11,7 @@ from scipy import ndimage
 from scipy.signal import find_peaks
 import cftime as cft
 import itertools
+import h5py
 try:
     import multiprocessing as mp
 except:
@@ -200,7 +201,8 @@ def get_indeces(data):
 
 
 def distance_matrix(lons, lats):
-    '''Calculates the distances (in km) between any pairs of points based on the formulas
+    '''Calculates the distances (in km) between any pairs of points based on
+    the formulas
     c = sin(lati1)*sin(lati2)+cos(longi1-longi2)*cos(lati1)*cos(lati2)
     d = EARTH_RADIUS*Arccos(c)
     where EARTH_RADIUS is in km and the angles are in radians.
@@ -252,7 +254,7 @@ def get_width(data, thr):
 
 
 def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
-                   regrid_avoided=False):
+                   regrid_avoided=False, hdf5_out=False, eddit=None):
     ''' Core function for the detection of eddies, used by detect_OW().
     Parameters
     ----------
@@ -330,7 +332,8 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
     # Construct dictionary for each time step
     # (Note: This nested-dictionaries approach seems to be rather slow
     # and needs further improvement!)
-    eddi = {}
+    if not hdf5_out:
+        eddi = {}
     # Find all regions with OW parameter exceeding threshold (=Eddy)
     regions, nregions = ndimage.label((OW.isel(time=t).values
                                        < OW_thr).astype(int))
@@ -345,12 +348,27 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
     # length of 1 degree of latitude [km]
     e = 0
     for iregion in list(range(nregions - 1)):
+        if hdf5_out:
+            ee = str(e)
+            try:
+                eddi = eddit.create_group(ee)
+            except:
+                eddi = eddit[ee]
+        else:
+            eddi[e] = {}
         index = region_index[iregion + 1]
         iimin = index[1].min()
         iimax = index[1].max() + 1
         ijmin = index[0].min()
         ijmax = index[0].max() + 1
         if ((iimax == 1) | (ijmax == 1)):
+            if hdf5_out:
+                try:
+                    test = eddit[ee]["time"][()]
+                except:
+                    del eddit[ee]
+            else:
+                del eddi[e]
             continue
         iimin2 = iimin
         ijmin2 = ijmin
@@ -364,7 +382,6 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
             ijmin2 = ijmin - 1
         region = (regions == iregion + 1).astype(int)
         # Loop through all regions detected as eddy at each time step
-        eddi[e] = {}
         # Calculate number of pixels comprising detected region, reject if
         # not within [Npix_min, Npix_max]
         region_Npix = region.sum()
@@ -374,7 +391,13 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
         interior = ndimage.binary_erosion(region)
         exterior = region.astype(bool) ^ interior
         if interior.sum() == 0:
-            del eddi[e]
+            if hdf5_out:
+                try:
+                    test = eddit[ee]["time"][()]
+                except:
+                    del eddit[ee]
+            else:
+                del eddi[e]
             continue
         if (det_param['no_long'] or det_param['no_two']):
             min_width = int(np.floor(np.sqrt(region_Npix / np.pi)))
@@ -455,7 +478,17 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
             & eddy_no_horseshoe & has_internal_ext):
             # If the region is not too small and not too big, extract
             # eddy information
-            eddi[e]['time'] = OW.isel(time=t)['time'].values
+            if hdf5_out:
+                e_time = cft.date2num(OW.isel(time=t)['time'].values,
+                                      det_param["time_units"],
+                                      calendar=det_param["calendar"],
+                                      has_year_zero=det_param["has_year_zero"])
+                eddi["time"] = e_time
+                eddi["time"].attrs["calendar"] = det_param["calendar"],
+                eddi["time"].attrs["has_year_zero"] = det_param["has_year_zero"]
+                eddi["time"].attrs["units"] = det_param["time_units"]
+            else:
+                eddi[e]['time'] = OW.isel(time=t)['time'].values
             # find centre of mass of eddy
             index_eddy = (index[0] - ijmin, index[1] - iimin)
             if regrid_avoided:
@@ -478,13 +511,22 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                                 OW['lon'].values)
                 lat_eddies = np.interp(j_cen, range(0, len(OW['lat'])),
                                 OW['lat'].values)
-            if lon_eddies > 180:
-                eddi[e]['lon'] = np.array([lon_eddies]) - 360.
-            elif lon_eddies < -180:
-                eddi[e]['lon'] = np.array([lon_eddies]) + 360.
+            if hdf5_out:
+                if lon_eddies > 180:
+                    eddi['lon'] = np.array([lon_eddies]) - 360.
+                elif lon_eddies < -180:
+                    eddi['lon'] = np.array([lon_eddies]) + 360.
+                else:
+                    eddi['lon'] = np.array([lon_eddies])
+                eddi['lat'] = np.array([lat_eddies])
             else:
-                eddi[e]['lon'] = np.array([lon_eddies])
-            eddi[e]['lat'] = np.array([lat_eddies])
+                if lon_eddies > 180:
+                    eddi[e]['lon'] = np.array([lon_eddies]) - 360.
+                elif lon_eddies < -180:
+                    eddi[e]['lon'] = np.array([lon_eddies]) + 360.
+                else:
+                    eddi[e]['lon'] = np.array([lon_eddies])
+                eddi[e]['lat'] = np.array([lat_eddies])
             # calc vorticity amplitude
             if vort.isel(time=t).values[interior].mean() > 0:
                 amp = (vort.isel(time=t).values[interior].max()
@@ -492,7 +534,10 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
             elif vort.isel(time=t).values[interior].mean() < 0:
                 amp = (vort.isel(time=t).values[exterior].mean()
                        - vort.isel(time=t).values[interior].min())
-            eddi[e]['amp'] = np.array([amp])
+            if hdf5_out:
+                eddi['amp'] = np.array([amp])
+            else:
+                eddi[e]['amp'] = np.array([amp])
             # store all eddy indices
             if regrid_avoided:
                 j_min = (data.y.where(data.y == OW.y.min(), other=0)
@@ -504,44 +549,101 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                          ** 2).argmax().values
                 i_min = (data.lon.where(data.lon == OW.lon.min(), other=0)
                          ** 2).argmax().values
-            eddi[e]['eddy_j'] = index[0] + j_min
-            eddi[e]['eddy_i'] = index[1] + i_min
-            # assign (and calculated) area, and scale of eddies
-            eddi[e]['area'] = np.array([((e1f.values[index] / 1000.)
+            if hdf5_out:
+                eddi['eddy_j'] = index[0] + j_min
+                eddi['eddy_i'] = index[1] + i_min
+                # assign (and calculated) area, and scale of eddies
+                eddi['area'] = np.array([((e1f.values[index] / 1000.)
                                          * (e2f.values[index] / 1000.)).sum()])
-            eddi[e]['scale'] = np.array([np.sqrt(eddi[e]['area']
+                eddi['scale'] = np.array([np.sqrt(eddi['area'][:]
                                          / np.pi)])  # [km]
-            # get eddy type from Vorticity and store extrema
-            if det_param['grid'] == 'latlon':
-                if eddi[e]['lat'] < 0:
-                    if vort.isel(time=t).values[index].mean() < 0:
-                        eddi[e]['type'] = 'cyclonic'
-                    elif vort.isel(time=t).values[index].mean() > 0:
-                        eddi[e]['type'] = 'anticyclonic'
-                elif eddi[e]['lat'] >= 0:
-                    if vort.isel(time=t).values[index].mean() > 0:
-                        eddi[e]['type'] = 'cyclonic'
-                    elif vort.isel(time=t).values[index].mean() < 0:
-                        eddi[e]['type'] = 'anticyclonic'
-            elif det_param['grid'] == 'cartesian':
-                if det_param['hemi'] == 'south':
-                    if vort.isel(time=t).values[index].mean() < 0:
-                        eddi[e]['type'] = 'cyclonic'
-                    elif vort.isel(time=t).values[index].mean() > 0:
-                        eddi[e]['type'] = 'anticyclonic'
-                elif det_param['hemi'] == 'north':
-                    if vort.isel(time=t).values[index].mean() > 0:
-                        eddi[e]['type'] = 'cyclonic'
-                    elif vort.isel(time=t).values[index].mean() < 0:
-                        eddi[e]['type'] = 'anticyclonic'
+                # get eddy type from Vorticity and store extrema
+                if det_param['grid'] == 'latlon':
+                    if eddi['lat'][:] < 0:
+                        if vort.isel(time=t).values[index].mean() < 0:
+                            eddi['type'] = 'cyclonic'
+                        elif vort.isel(time=t).values[index].mean() > 0:
+                            eddi['type'] = 'anticyclonic'
+                    elif eddi['lat'][:] >= 0:
+                        if vort.isel(time=t).values[index].mean() > 0:
+                            eddi['type'] = 'cyclonic'
+                        elif vort.isel(time=t).values[index].mean() < 0:
+                            eddi['type'] = 'anticyclonic'
+                elif det_param['grid'] == 'cartesian':
+                    if det_param['hemi'] == 'south':
+                        if vort.isel(time=t).values[index].mean() < 0:
+                            eddi['type'] = 'cyclonic'
+                        elif vort.isel(time=t).values[index].mean() > 0:
+                            eddi['type'] = 'anticyclonic'
+                    elif det_param['hemi'] == 'north':
+                        if vort.isel(time=t).values[index].mean() > 0:
+                            eddi['type'] = 'cyclonic'
+                        elif vort.isel(time=t).values[index].mean() < 0:
+                            eddi['type'] = 'anticyclonic'
+            else:
+                eddi[e]['eddy_j'] = index[0] + j_min
+                eddi[e]['eddy_i'] = index[1] + i_min
+                # assign (and calculated) area, and scale of eddies
+                eddi[e]['area'] = np.array([((e1f.values[index] / 1000.)
+                    * (e2f.values[index] / 1000.)).sum()])
+                eddi[e]['scale'] = np.array(np.sqrt(eddi[e]['area']
+                                             / np.pi))  # [km]
+                # get eddy type from Vorticity and store extrema
+                if det_param['grid'] == 'latlon':
+                    if eddi[e]['lat'] < 0:
+                        if vort.isel(time=t).values[index].mean() < 0:
+                            eddi[e]['type'] = 'cyclonic'
+                        elif vort.isel(time=t).values[index].mean() > 0:
+                            eddi[e]['type'] = 'anticyclonic'
+                    elif eddi[e]['lat'] >= 0:
+                        if vort.isel(time=t).values[index].mean() > 0:
+                            eddi[e]['type'] = 'cyclonic'
+                        elif vort.isel(time=t).values[index].mean() < 0:
+                            eddi[e]['type'] = 'anticyclonic'
+                elif det_param['grid'] == 'cartesian':
+                    if det_param['hemi'] == 'south':
+                        if vort.isel(time=t).values[index].mean() < 0:
+                            eddi[e]['type'] = 'cyclonic'
+                        elif vort.isel(time=t).values[index].mean() > 0:
+                            eddi[e]['type'] = 'anticyclonic'
+                    elif det_param['hemi'] == 'north':
+                        if vort.isel(time=t).values[index].mean() > 0:
+                            eddi[e]['type'] = 'cyclonic'
+                        elif vort.isel(time=t).values[index].mean() < 0:
+                            eddi[e]['type'] = 'anticyclonic'
             e += 1
+            ## double check that threre has something been written
+            if hdf5_out:
+                try:
+                    test = eddit[ee]["time"][()]
+                except:
+                    del eddit[ee]
+            else:
+                try:
+                    test = eddi[e-1]["time"]
+                except:
+                    print("WEIRD: nothing written to eddy", str(e-1))
+                    del eddi[e-1]
         else:
-            del eddi[e]
+            if hdf5_out:
+                try:
+                    test = eddit[ee]["time"][()]
+                except:
+                    del eddit[ee]
+            else:
+                try:
+                    test = eddi[e]["time"]
+                except:
+                    del eddi[e]
+    if hdf5_out:
+        out = eddit
+    else:
+        out = eddi
     return eddi
 
 
 def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
-                   regrid_avoided=False):
+                   regrid_avoided=False, hdf5_out=False, eddit=None):
     '''
     Detect eddies present in field which satisfy the 5 criteria
     outlined in Chelton et al., Prog. ocean., 2011, App. B.2.:
@@ -572,7 +674,8 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
     ssh_crits = ssh_crits[ssh_crits >= det_param['ssh_thr']]
     # initialise eddy counter & output dict
     e = 0
-    eddi = {}
+    if not hdf5_out:
+        eddi = {}
     for cyc in ['anticyclonic', 'cyclonic']:
         field = SSH.isel(time=t).values
         # ssh_crits increasing for 'anticyclonic', decreasing for 'cyclonic'
@@ -593,7 +696,14 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
                     (field < ssh_crit).astype(int))
             region_index = get_indeces(regions)
             for iregion in list(range(nregions)):
-                eddi[e] = {}
+                if hdf5_out:
+                    ee = str(e)
+                    try:
+                        eddi = eddit.create_group(ee)
+                    except:
+                        eddi = eddit[ee]
+                else:
+                    eddi[e] = {}
         # 2. Calculate number of pixels comprising detected region, reject if
         # not within [Npix_min, Npix_max]
                 region = (regions==iregion+1).astype(int)
@@ -607,8 +717,15 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
                 interior = ndimage.binary_erosion(region)
                 exterior = region.astype(bool) ^ interior
                 if interior.sum() == 0:
-                    del eddi[e]
-                    continue
+                    if interior.sum() == 0:
+                        if hdf5_out:
+                            try:
+                                test = eddit[ee]["time"][()]
+                            except:
+                                del eddit[ee]
+                        else:
+                            del eddi[e]
+                        continue
                 if cyc == 'anticyclonic':
                     has_internal_ext = (field[interior].max() >
                                         field[exterior].max())
@@ -654,20 +771,33 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
                                            SSH['lon'].values)
                     lat_eddies = np.interp(j_cen, range(0, len(SSH['lat'])),
                                            SSH['lat'].values)
-                    if lon_eddies > 180:
-                        eddi[e]['lon'] = np.array([lon_eddies]) - 360.
-                    elif lon_eddies < -180:
-                        eddi[e]['lon'] = np.array([lon_eddies]) + 360.
+                    if hdf5_out:
+                        if lon_eddies > 180:
+                            eddi['lon'] = np.array([lon_eddies]) - 360.
+                        elif lon_eddies < -180:
+                            eddi['lon'] = np.array([lon_eddies]) + 360.
+                        else:
+                            eddi['lon'] = np.array([lon_eddies])
+                        eddi['lat'] = np.array([lat_eddies])
                     else:
-                        eddi[e]['lon'] = np.array([lon_eddies])
-                    eddi[e]['lat'] = np.array([lat_eddies])
+                        if lon_eddies > 180:
+                            eddi[e]['lon'] = np.array([lon_eddies]) - 360.
+                        elif lon_eddies < -180:
+                            eddi[e]['lon'] = np.array([lon_eddies]) + 360.
+                        else:
+                            eddi[e]['lon'] = np.array([lon_eddies])
+                        eddi[e]['lat'] = np.array([lat_eddies])
                     # store all eddy indices
                     j_min = (data.lat.where(data.lat == SSH.lat.min(), other=0)
                              ** 2).argmax().values
                     i_min = (data.lon.where(data.lon == SSH.lon.min(), other=0)
                              ** 2).argmax().values
-                    eddi[e]['eddy_j'] = index[0] + j_min
-                    eddi[e]['eddy_i'] = index[1] + i_min
+                    if hdf5_out:
+                        eddi['eddy_j'] = index[0] + j_min
+                        eddi['eddy_i'] = index[1] + i_min
+                    else:
+                        eddi[e]['eddy_j'] = index[0] + j_min
+                        eddi[e]['eddy_i'] = index[1] + i_min
                     # assign (and calculated) amplitude, area, and scale of
                     # eddies
                     len_deg_lon = ((np.pi/180.) * 6371
@@ -680,20 +810,47 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
                     eddy_mask = np.ones(field.shape)
                     eddy_mask[interior.astype(int)==1] = np.nan
                     field = field * eddy_mask
-                    eddi[e]['time'] = SSH.isel(time=t).time.values
-                    eddi[e]['amp'] = np.array([amp])
-                    eddi[e]['area'] = np.array([area])
-                    eddi[e]['scale'] = np.array([scale])
-                    eddi[e]['type'] = cyc
+                    if hdf5_out:
+                        e_time = cft.date2num(OW.isel(time=t)['time'].values,
+                            det_param["time_units"],
+                            calendar=det_param["calendar"],
+                            has_year_zero=det_param["has_year_zero"])
+                        eddi["time"] = e_time
+                        eddi["time"].attrs["calendar"] = det_param["calendar"]
+                        eddi["time"].attrs["has_year_zero"] = det_param["has_"
+                                                                + "year_zero"]
+                        eddi["time"].attrs["units"] = det_param["time_units"]
+                        eddi['amp'] = np.array([amp])
+                        eddi['area'] = np.array([area])
+                        eddi['scale'] = np.array([scale])
+                        eddi['type'] = cyc
+                    else:
+                        eddi[e]['time'] = SSH.isel(time=t).time.values
+                        eddi[e]['amp'] = np.array([amp])
+                        eddi[e]['area'] = np.array([area])
+                        eddi[e]['scale'] = np.array([scale])
+                        eddi[e]['type'] = cyc
                     e += 1
                 else:
-                    del eddi[e]
-    return eddi
+                    if hdf5_out:
+                        e = e
+                    else:
+                        del eddi[e]
+            if hdf5_out:
+                try:
+                    test = eddit[ee]["time"][()]
+                except:
+                    del eddit[ee]
+    if hdf5_out:
+        out = eddit
+    else:
+        out = eddi
+    return out
 
 
 def detect_OW(data, det_param, ow_var, vort_var,
               use_bags=False, use_mp=False, mp_cpu=2,
-              regrid_avoided=False):
+              regrid_avoided=False, hdf5_out=False, out_file=None):
     ''' Detect eddies based on specified Okubo-Weiss parameter.
     Parameters
     ----------
@@ -773,6 +930,13 @@ def detect_OW(data, det_param, ow_var, vort_var,
         raise ValueError('Cannot use dask_bags and multiprocessing at the'
                          + 'same time. Set either `use_bags` or `use_mp`'
                          + 'to `False`.')
+    if hdf5_out:
+        use_bags = False
+        use_mp = False
+        print("multiprocessing dask_bags deactivated due to incompatibility"
+              + " with HDF5")
+        if out_file == None:
+            out_file = 'detection.hdf5'
     # Verify that the specified region lies within the dataset provided
     if (det_param['lon1'] < np.around(data['lon'].min())
        or det_param['lon2'] > np.around(data['lon'].max())):
@@ -798,6 +962,9 @@ def detect_OW(data, det_param, ow_var, vort_var,
                          + ' axis and the desired time range for the'
                          + ' detection')
     #
+    if hdf5_out:
+        print('detected eddies will be written to ' + out_file)
+    print('-')
     print('preparing data for eddy detection'
           + ' (masking and region extracting etc.)')
     # Make sure longitude vector is monotonically increasing if we have a
@@ -872,27 +1039,50 @@ def detect_OW(data, det_param, ow_var, vort_var,
                                  ,seeds_bag)
         eddies = detection.compute()
     else:
-        eddies = {}
-        OW = OW.compute()
-        vort = vort.compute()
-        e1f = e1f.compute()
-        e2f = e2f.compute()
-        if len(np.shape(data[OW_thr_name])) > 1:
-            OW_thr = OW_thr.compute()
-        for tt in np.arange(0, len(OW['time'])):
-            steps = np.around(np.linspace(0, len(OW['time']), 10))
-            if tt in steps:
-                print('detection at time step ', str(tt + 1), ' of ',
-                      len(OW['time']))
-            eddies[tt] = detect_OW_core(data, det_param.copy(),
-                                        OW, vort, tt, OW_thr, e1f, e2f,
-                                        regrid_avoided=regrid_avoided)
+        if hdf5_out:
+            with h5py.File(out_file, 'w') as eddies:
+                OW = OW.compute()
+                vort = vort.compute()
+                e1f = e1f.compute()
+                e2f = e2f.compute()
+                if len(np.shape(data[OW_thr_name])) > 1:
+                    OW_thr = OW_thr.compute()
+                for t in np.arange(0, len(OW.time)):
+                    tt = OW['time'][t].values[()].strftime()[0:10]
+                    steps = np.around(np.linspace(0, len(OW['time']), 10))
+                    if t in steps:
+                        print('detection at time step ', str(t + 1), ' of ',
+                              len(OW['time']))
+                    try:
+                        eddit = eddies.create_group(tt)
+                    except:
+                        raise ValueError("Unable to create group" + str(tt))
+                    eddit = detect_OW_core(data, det_param.copy(),
+                                           OW, vort, t, OW_thr, e1f, e2f,
+                                           regrid_avoided=regrid_avoided,
+                                           hdf5_out=True, eddit=eddit)
+        else:
+            eddies = {}
+            OW = OW.compute()
+            vort = vort.compute()
+            e1f = e1f.compute()
+            e2f = e2f.compute()
+            if len(np.shape(data[OW_thr_name])) > 1:
+                OW_thr = OW_thr.compute()
+            for tt in np.arange(0, len(OW['time'])):
+                steps = np.around(np.linspace(0, len(OW['time']), 10))
+                if tt in steps:
+                    print('detection at time step ', str(tt + 1), ' of ',
+                          len(OW['time']))
+                eddies[tt] = detect_OW_core(data, det_param.copy(),
+                                            OW, vort, tt, OW_thr, e1f, e2f,
+                                            regrid_avoided=regrid_avoided)
     return eddies
 
 
 def detect_SSH(data, det_param, ssh_var,
               use_bags=False, use_mp=False, mp_cpu=2,
-              regrid_avoided=False):
+              regrid_avoided=False, hdf5_out=False):
     ''' Detect eddies based on SSH following Chelton 2011. Prepares the
     necessary input for detect_SSH_core that performs the actual detection.
     Parallel computation of timesteps using dask bag.
@@ -966,6 +1156,13 @@ def detect_SSH(data, det_param, ssh_var,
         raise ValueError('Cannot use dask_bags and multiprocessing at the'
                          + 'same time. Set either `use_bags` or `use_mp`'
                          + 'to `False`.')
+    if hdf5_out:
+        use_bags = False
+        use_mp = False
+        print("multiprocessing dask_bags deactivated due to incompatibility"
+              + " with HDF5")
+        if out_file == None:
+            out_file = 'detection.hdf5'
     if regrid_avoided == True:
         raise ValueError("regrid_avoided cannot be used in combination"
                          + "with detection based on SSH (yet).")
@@ -994,6 +1191,9 @@ def detect_SSH(data, det_param, ssh_var,
                          + ' axis and the desired time range for the'
                          + ' detection')
     #
+    if hdf5_out:
+        print('detected eddies will be written to ' + out_file)
+    print('-')
     print('preparing data for eddy detection'
           + ' (masking and region extracting etc.)')
     # Make sure longitude vector is monotonically increasing if we have a
@@ -1054,15 +1254,35 @@ def detect_SSH(data, det_param, ssh_var,
                                  ,seeds_bag)
         eddies = detection.compute()
     else:
-        eddies = {}
-        SSH = SSH.compute()
-        e1f = e1f.compute()
-        e2f = e2f.compute()
-        for tt in np.arange(0, len(SSH['time'])):
-            steps = np.around(np.linspace(0, len(SSH['time']), 10))
-            if tt in steps:
-                print('detection at time step ', str(tt + 1), ' of ',
-                      len(SSH['time']))
-            eddies[tt] = detect_SSH_core(data, det_param.copy(),
-                                         SSH, tt, ssh_crits, e1f, e2f)
+        if hdf5_out:
+            with h5py.File(out_file, 'w') as eddies:
+                SSH = SSH.compute()
+                e1f = e1f.compute()
+                e2f = e2f.compute()
+                for t in np.arange(0, len(OW.time)):
+                    tt = OW['time'][t].values[()].strftime()[0:10]
+                    steps = np.around(np.linspace(0, len(OW['time']), 10))
+                    if t in steps:
+                        print('detection at time step ', str(t + 1), ' of ',
+                              len(OW['time']))
+                    try:
+                        eddit = eddies.create_group(tt)
+                    except:
+                        raise ValueError("Unable to create group" + str(tt))
+                    eddit = detect_SSH_core(data, det_param.copy(),
+                                            SSH, t, ssh_crits, e1f, e2f,
+                                            regrid_avoided=regrid_avoided,
+                                            hdf5_out=True, eddit=eddit)
+        else:
+            eddies = {}
+            SSH = SSH.compute()
+            e1f = e1f.compute()
+            e2f = e2f.compute()
+            for tt in np.arange(0, len(SSH['time'])):
+                steps = np.around(np.linspace(0, len(SSH['time']), 10))
+                if tt in steps:
+                    print('detection at time step ', str(tt + 1), ' of ',
+                          len(SSH['time']))
+                eddies[tt] = detect_SSH_core(data, det_param.copy(),
+                                             SSH, tt, ssh_crits, e1f, e2f)
     return eddies

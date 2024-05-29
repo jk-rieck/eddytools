@@ -15,6 +15,7 @@ import xarray as xr
 import pickle
 import cftime as cft
 from glob import glob
+from . import tools
 
 
 def load_rossrad(input_path):
@@ -514,12 +515,20 @@ def eddy_is_near(track, trac_param, un_items, range_un_items, rossrad):
     y0 : float
         Latitude of eddy in `track`.
     '''
-    x0 = track['lon'][-1]  # [deg. lon] or [m]
-    y0 = track['lat'][-1]  # [deg. lat] or [m]
-    tmp_lon = [un_items[i]['lon']
-               for i in range_un_items] # [deg. lon] or [m]
-    tmp_lat = [un_items[i]['lat']
-               for i in range_un_items] # [deg. lat] or [m]
+    if isinstance(track, dict):
+        x0 = track['lon'][-1]  # [deg. lon] or [m]
+        y0 = track['lat'][-1]  # [deg. lat] or [m]
+        tmp_lon = [un_items[i]['lon']
+                   for i in range_un_items] # [deg. lon] or [m]
+        tmp_lat = [un_items[i]['lat']
+                   for i in range_un_items] # [deg. lat] or [m]
+    else:
+        x0 = track['lon'][()][-1]  # [deg. lon] or [m]
+        y0 = track['lat'][()][-1]  # [deg. lat] or [m]
+        tmp_lon = [un_items[i]['lon'][()]
+                   for i in range_un_items] # [deg. lon] or [m]
+        tmp_lat = [un_items[i]['lat'][()]
+                   for i in range_un_items] # [deg. lat] or [m]
     if trac_param['grid'] == 'latlon':
         if not trac_param['search_circle']:
             d = calculate_d(trac_param['search_dist'], x0, y0, rossrad,
@@ -612,18 +621,32 @@ def eddy_is_similar(track, trac_param, un_items, range_un_items):
         Boolean list of length `len(un_items)`. True for the eddies that are
         of similar area as the eddy in `track`, False otherwise.
     '''
-    amp = track['amp'][-1]
-    area = track['area'][-1]
-    is_similar_amp = np.array([(un_items[i]['amp'] < amp
-                                * trac_param['eddy_scale_max'])
-                               * (un_items[i]['amp'] > amp
-                                  * trac_param['eddy_scale_min'])
-                               for i in range_un_items])
-    is_similar_area = np.array([(un_items[i]['area'] < area
-                                 * trac_param['eddy_scale_max'])
-                                * (un_items[i]['area'] > area
-                                   * trac_param['eddy_scale_min'])
-                                for i in range_un_items])
+    if isinstance(track, dict):
+        amp = track['amp'][-1]
+        area = track['area'][-1]
+        is_similar_amp = np.array([(un_items[i]['amp'][()] < amp
+                                    * trac_param['eddy_scale_max'])
+                                   * (un_items[i]['amp'][()] > amp
+                                      * trac_param['eddy_scale_min'])
+                                   for i in range_un_items])
+        is_similar_area = np.array([(un_items[i]['area'][()] < area
+                                     * trac_param['eddy_scale_max'])
+                                    * (un_items[i]['area'][()] > area
+                                       * trac_param['eddy_scale_min'])
+                                    for i in range_un_items])
+    else:
+        amp = track['amp'][()][-1]
+        area = track['area'][()][-1]
+        is_similar_amp = np.array([(un_items[i]['amp'][()] < amp
+                                    * trac_param['eddy_scale_max'])
+                                   * (un_items[i]['amp'][()] > amp
+                                      * trac_param['eddy_scale_min'])
+                                   for i in range_un_items])
+        is_similar_area = np.array([(un_items[i]['area'][()] < area
+                                     * trac_param['eddy_scale_max'])
+                                    * (un_items[i]['area'][()] > area
+                                       * trac_param['eddy_scale_min'])
+                                    for i in range_un_items])
     return is_similar_amp, is_similar_area
 
 
@@ -645,9 +668,205 @@ def eddy_is_same_type(track, un_items, range_un_items):
         Boolean list of length `len(un_items)`. True for the eddies that are
         the same type as the eddy in `track`, False otherwise.
     '''
-    is_same_type = np.array([un_items[i]['type'] == track['type']
+    if isinstance(track, dict):
+        if len(track['amp']) > 1:
+            tracktype = track['type'][-1]
+        else:
+            tracktype = track['type']
+        try:
+            tracktype = tracktype.decode("utf-8")
+        except:
+            tracktype = tracktype
+        is_same_type = np.array([un_items[i]['type'][()].decode("utf-8") == tracktype
                              for i in range_un_items])[:, None]
+    else:
+        is_same_type = np.array([un_items[i]['type'][()].decode("utf-8") == track['type'][-1].decode("utf-8")
+                                 for i in range_un_items])[:, None]
     return is_same_type
+
+
+def init_tracks(trac_param, eddies_time, in_file, hdf5_in, hdf5_out):
+    if hdf5_out:
+        tracks = h5py.File('tmp_tracks.hdf5', 'w')
+    else:
+        tracks = []
+    max_l = np.ceil(trac_param['max_length'] / trac_param['dt'])
+    if in_file:
+        t = 0
+        didntwork = True
+        if hdf5_in:
+            with h5py.File(glob(trac_param['data_path']
+                                + trac_param['file_root'] + '_'
+                                + trac_param['file_spec']
+                                + '.hdf5')[0], 'r') as filehdf:
+                while didntwork:
+                    firstdate = str(eddies_time[t])[0:10]
+                    try:
+                        t_in = filehdf[firstdate]
+                        didntwork = False
+                    except:
+                        t += 1
+                        didntwork = True
+                        if t >= len(eddies_time):
+                            break
+                if didntwork:
+                    print('no eddies found to track')
+                    return
+                datestring = firstdate
+                det_eddies = filehdf[datestring]
+                for ed in np.arange(0, len(det_eddies)):
+                    ee = str(ed)
+                    if hdf5_out:
+                        track = tracks.create_group(ee)
+                    else:
+                        tracks.append({})
+                    for key in det_eddies[ee]:
+                        l = np.shape(det_eddies[ee][key][()])
+                        if hdf5_out:
+                            if key == "time":
+                                tmp = track.create_dataset(key, (1,), maxshape=(max_l,), chunks=(1,),
+                                                           data=det_eddies[ee][key][()])
+                                tmp.attrs["calendar"] = det_eddies[ee][key].attrs["calendar"]
+                                tmp.attrs["has_year_zero"] = det_eddies[ee][key].attrs["has_year_zero"]
+                                tmp.attrs["units"] = det_eddies[ee][key].attrs["units"]
+                            elif key == "type":
+                                tmp = track.create_dataset(key, (1,), maxshape=(max_l,), chunks=(1,),
+                                                           data=det_eddies[ee][key][()])
+                            elif ((key == "eddy_i") | (key == "eddy_j")):
+                                tmp = track.create_dataset(key, (1, l[0]), maxshape=(max_l, trac_param["Npix_max"]),
+                                                           chunks=(1, l[0]), data=det_eddies[ee][key][()][None, :])
+                            else:
+                                tmp = track.create_dataset(key, l, maxshape=(max_l,), chunks=l,
+                                                           data=det_eddies[ee][key][()])
+                        else:
+                            tracks[ed][key] = det_eddies[ee][key][()]
+                    if hdf5_out:
+                        tmp = track.create_dataset('exist_at_start', (1), data=True)
+                        tmp = track.create_dataset('terminated', (1), data=False)
+                    else:
+                        tracks[ed]["calendar"] = det_eddies[ee]["time"].attrs["calendar"]
+                        tracks[ed]["has_year_zero"] = det_eddies[ee]["time"].attrs["has_year_zero"]
+                        tracks[ed]["units"] = det_eddies[ee]["time"].attrs["units"]
+                        tracks[ed]['exist_at_start'] = True
+                        tracks[ed]['terminated'] = False
+            filehdf.close()
+        else:
+            while didntwork:
+                try:
+                    firstdate = str(eddies_time[t])[0:10]
+                    os.path.isfile(glob(trac_param['data_path']
+                                   + trac_param['file_root'] + '_'
+                                   + str(firstdate) + '_'
+                                   + trac_param['file_spec']
+                                   + '.pickle')[0])
+                    didntwork = False
+                except:
+                    t += 1
+                    didntwork = True
+                    if t >= len(eddies_time):
+                        break
+            if didntwork:
+                print('no eddies found to track')
+                return
+            datestring = firstdate
+            with open(glob(trac_param['data_path'] + trac_param['file_root'] + '_'
+                      + str(firstdate) + '_' + trac_param['file_spec']
+                      + '.pickle')[0],
+                      'rb') as f:
+                tmp_eddies = pickle.load(f)
+                with tools.dict2hdf5(tmp_eddies, "det_eddies.hdf5", trac_param['time_units'],
+                                            trac_param['calendar'], trac_param['has_year_zero']) as d_eddies:
+                    det_eddies = d_eddies[datestring]
+                    for ed in np.arange(0, len(det_eddies)):
+                        ee = str(ed)
+                        if hdf5_out:
+                            track = tracks.create_group(ee)
+                            for key in det_eddies[ee]:
+                                l = np.shape(det_eddies[ee][key][()])
+                                if key == "time":
+                                    tmp = track.create_dataset(key, (1,), maxshape=(max_l,), chunks=(1,),
+                                                               data=det_eddies[ee][key][()])
+                                    tmp.attrs["calendar"] = det_eddies[ee][key].attrs["calendar"]
+                                    tmp.attrs["has_year_zero"] = det_eddies[ee][key].attrs["has_year_zero"]
+                                    tmp.attrs["units"] = det_eddies[ee][key].attrs["units"]
+                                elif key == "type":
+                                    tmp = track.create_dataset(key, (1,), maxshape=(max_l,), chunks=(1,),
+                                                               data=det_eddies[ee][key][()])
+                                elif ((key == "eddy_i") | (key == "eddy_j")):
+                                    tmp = track.create_dataset(key, (1, l[0]), maxshape=(max_l, trac_param["Npix_max"]),
+                                                               chunks=(1, l[0]), data=det_eddies[ee][key][()][None, :])
+                                else:
+                                    tmp = track.create_dataset(key, l, maxshape=(max_l,), chunks=l,
+                                                               data=det_eddies[ee][key][()])
+                            tmp = track.create_dataset('exist_at_start', (1), data=True)
+                            tmp = track.create_dataset('terminated', (1), data=False)
+                        else:
+                            tracks.append(tmp_eddies[ed].copy())
+                            tracks[ed]['exist_at_start'] = True
+                            tracks[ed]['terminated'] = False
+                            tracks[ed]['eddy_i'] = {}
+                            tracks[ed]['eddy_j'] = {}
+                            tracks[ed]['eddy_i'][0] = tmp_eddies[ed]['eddy_i']
+                            tracks[ed]['eddy_j'][0] = tmp_eddies[ed]['eddy_j']
+                d_eddies.close()
+            f.close()
+    else:
+        if hdf5_in:
+            print("hdf5_in only works together with in_file=True")
+            return
+        t = 0
+        didntwork = True
+        while didntwork:
+            try:
+                firstdate = str(trac_param['dict'][t][0]['time'])[0:10]
+                didntwork = False
+            except:
+                t += 1
+                didntwork = True
+                if t >= len(eddies_time):
+                    break
+        if didntwork:
+            print('no eddies found to track')
+            return
+        datestring = firstdate
+        tmp_eddies = trac_param['dict'][t]
+        with tools.dict2hdf5(tmp_eddies, "det_eddies.hdf5", trac_param['time_units'],
+                                            trac_param['calendar'], trac_param['has_year_zero']) as d_eddies:
+            det_eddies = d_eddies[datestring]
+            for ed in np.arange(0, len(det_eddies)):
+                ee = str(ed)
+                if hdf5_out:
+                    track = tracks.create_group(ee)
+                    for key in det_eddies[ee]:
+                        l = np.shape(det_eddies[ee][key][()])
+                        if key == "time":
+                            tmp = track.create_dataset(key, (1,), maxshape=(max_l,), chunks=(1,),
+                                                       data=det_eddies[ee][key][()])
+                            tmp.attrs["calendar"] = det_eddies[ee][key].attrs["calendar"]
+                            tmp.attrs["has_year_zero"] = det_eddies[ee][key].attrs["has_year_zero"]
+                            tmp.attrs["units"] = det_eddies[ee][key].attrs["units"]
+                        elif key == "type":
+                            tmp = track.create_dataset(key, (1,), maxshape=(max_l,), chunks=(1,),
+                                                       data=det_eddies[ee][key][()])
+                        elif ((key == "eddy_i") | (key == "eddy_j")):
+                            tmp = track.create_dataset(key, (1, l[0]), maxshape=(max_l, trac_param["Npix_max"]),
+                                                       chunks=(1, l[0]), data=det_eddies[ee][key][()][None, :])
+                        else:
+                            tmp = track.create_dataset(key, l, maxshape=(max_l,), chunks=l,
+                                                       data=det_eddies[ee][key][()])
+                    tmp = track.create_dataset('exist_at_start', (1), data=True)
+                    tmp = track.create_dataset('terminated', (1), data=False)
+                else:
+                    tracks.append(tmp_eddies[ed].copy())
+                    tracks[ed]['exist_at_start'] = True
+                    tracks[ed]['terminated'] = False
+                    tracks[ed]['eddy_i'] = {}
+                    tracks[ed]['eddy_j'] = {}
+                    tracks[ed]['eddy_i'][0] = tmp_eddies[ed]['eddy_i']
+                    tracks[ed]['eddy_j'][0] = tmp_eddies[ed]['eddy_j']
+            d_eddies.close()
+        os.remove("det_eddies.hdf5")
+    return tracks, t
 
 
 def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
@@ -713,22 +932,32 @@ def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
     Appends to global variables `tracks` and `terminated_list`.
     '''
     # Now, none of the eddies in `det_eddies` have been assigned to a track.
-    unassigned = [i for i in range(len(det_eddies))]
-
+    unassigned = [str(i) for i in range(len(det_eddies))]
     # For each existing eddy (t<tt) that has not been terminated, loop through
     # the unassigned eddies and assign to existing eddy if appropriate
     #
     # First we construct a list of all existing eddies
-    eddy_set = set(i for i in range(len(tracks)))
+    eddy_set = set(str(i) for i in range(len(tracks)))
     # Now we remove all terminated eddies from that list
     eddy_set = eddy_set - terminated_set
-    for ed in eddy_set:
+    for ee in eddy_set:
         # Check if eddy has already been terminated (just a safety measure,
         # terminated eddies should not be in `eddy_list` any more...)
-        if not tracks[ed]['terminated']:
+        not_terminated = False
+        if isinstance(tracks, list):
+            if not tracks[int(ee)]['terminated']:
+                not_terminated = True
+        else:
+            if not tracks[ee]['terminated'][()]:
+                not_terminated = True
+        if not_terminated:
+            if isinstance(tracks, list):
+                t = tracks[int(ee)]
+            else:
+                t = tracks[ee]
             # Get all unassigned eddies from `det_eddies`
             get_item = operator.itemgetter(*unassigned)
-            tmp_items = get_item(det_eddies)
+            tmp_items = get_item(dict(det_eddies))
             try:
                 test = tmp_items[0]
                 un_items = tmp_items
@@ -736,9 +965,8 @@ def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
                 un_items = {}
                 un_items[0] = tmp_items
             range_un_items = range(0, len(un_items))
-
             # Test whether any eddies in `un_items` are near `tracks[ed]`
-            is_near, x0, y0 = eddy_is_near(tracks[ed], trac_param,
+            is_near, x0, y0 = eddy_is_near(t, trac_param,
                                            un_items, range_un_items, rossrad)
             if is_near.any():
                 # If there are eddies near `tracks[ed]`, get their indeces and
@@ -746,7 +974,7 @@ def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
                 is_near_index = np.where(is_near)[0]
                 get_item = operator.itemgetter(*is_near_index)
                 un_items = get_item(un_items)
-                if not np.shape(un_items):
+                if np.shape(un_items) == (9,):
                     un_items = (un_items,)
                     range_un_items = range(0, len(un_items))
                 else:
@@ -754,12 +982,14 @@ def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
             else:
                 # If no eddy is near, terminate the track, append index to
                 # `terminated_list` and jump to next eddy.
-                tracks[ed]['terminated'] = True
-                terminated_set.add(ed)
+                if isinstance(tracks, list):
+                    tracks[int(ee)]['terminated'] = True
+                else:
+                    tracks[ee]['terminated'][()] = True
+                terminated_set.add(ee)
                 continue
-
             # Test whether any eddies in `un_items` are similar to `tracks[ed]`
-            is_similar_amp, is_similar_area = eddy_is_similar(tracks[ed],
+            is_similar_amp, is_similar_area = eddy_is_similar(t,
                                                               trac_param,
                                                               un_items,
                                                               range_un_items)
@@ -769,7 +999,7 @@ def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
                 is_similar_index = np.where(is_similar_area)[0]
                 get_item = operator.itemgetter(*is_similar_index)
                 un_items = get_item(un_items)
-                if not np.shape(un_items):
+                if np.shape(un_items) == (9,):
                     un_items = (un_items,)
                     range_un_items = range(0, len(un_items))
                 else:
@@ -777,13 +1007,15 @@ def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
             else:
                 # If no eddy is similar, terminate the track, append index to
                 # `terminated_list` and jump to next eddy.
-                tracks[ed]['terminated'] = True
-                terminated_set.add(ed)
+                if isinstance(tracks, list):
+                    tracks[int(ee)]['terminated'] = True
+                else:
+                    tracks[ee]['terminated'][()] = True
+                terminated_set.add(ee)
                 continue
-
             # Test whether any eddies in `un_items` are the same type as
             # `tracks[ed]`
-            is_same_type = eddy_is_same_type(tracks[ed],
+            is_same_type = eddy_is_same_type(t,
                                              un_items, range_un_items)
             if is_same_type.any():
                 # If there are eddies of the same type as `tracks[ed]`, get
@@ -791,7 +1023,7 @@ def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
                 is_same_type_index = np.where(is_same_type)[0]
                 get_item = operator.itemgetter(*is_same_type_index)
                 un_items = get_item(un_items)
-                if not np.shape(un_items):
+                if np.shape(un_items) == (9,):
                     un_items = (un_items,)
                     range_un_items = range(0, len(un_items))
                 else:
@@ -799,72 +1031,100 @@ def track_core(det_eddies, tracks, trac_param, terminated_set, rossrad):
             else:
                 # If no eddy is of the same type, terminate the track, append
                 # index to `terminated_list` and jump to next eddy
-                tracks[ed]['terminated'] = True
-                terminated_set.add(ed)
+                if isinstance(tracks, list):
+                    tracks[int(ee)]['terminated'] = True
+                else:
+                    tracks[ee]['terminated'][()] = True
+                terminated_set.add(ee)
                 continue
-
             # Possible eddies are those which are near, of the right
             # amplitude, and of the same type
             possibles = is_near_index[is_similar_index[is_same_type_index]]
-
             if possibles.sum() > 0:
                 # Of all found eddies, accept only the nearest one
-                dist = [np.sqrt((x0 - un_items[i]['lon']) ** 2
-                        + (y0 - un_items[i]['lat']) ** 2)
+                dist = [np.sqrt((x0 - un_items[i]['lon'][()]) ** 2
+                        + (y0 - un_items[i]['lat'][()]) ** 2)
                         for i in range_un_items]
                 nearest = dist.index(min(dist))
                 nearest_eddy = is_near_index[is_similar_index[
                                    is_same_type_index[nearest]]]
                 next_eddy = unassigned[nearest_eddy]
-
                 # Add coordinates and properties of accepted eddy to
                 # trajectory of eddy ed
-                tracks[ed]['lon'] = np.append(
-                    tracks[ed]['lon'], det_eddies[next_eddy]['lon'])
-                tracks[ed]['lat'] = np.append(
-                    tracks[ed]['lat'], det_eddies[next_eddy]['lat'])
-                tracks[ed]['amp'] = np.append(
-                    tracks[ed]['amp'], det_eddies[next_eddy]['amp'])
-                tracks[ed]['area'] = np.append(
-                    tracks[ed]['area'], det_eddies[next_eddy]['area'])
-                tracks[ed]['scale'] = np.append(
-                    tracks[ed]['scale'],
-                    det_eddies[next_eddy]['scale'])
-                tracks[ed]['time'] = np.append(
-                    tracks[ed]['time'], det_eddies[next_eddy]['time'])
-                tracks[ed]['eddy_i'][len(tracks[ed]['eddy_i'])] =\
-                    det_eddies[next_eddy]['eddy_i']
-                tracks[ed]['eddy_j'][len(tracks[ed]['eddy_j'])] =\
-                    det_eddies[next_eddy]['eddy_j']
+                if isinstance(tracks, list):
+                    for key in det_eddies[next_eddy].keys():
+                        tracks[int(ee)][key] = np.append(tracks[int(ee)][key],
+                                                         det_eddies[next_eddy][key][()])
+                else:
+                    for key in det_eddies[next_eddy].keys():
+                        l = tracks[ee][key].shape[0]
+                        tracks[ee][key].resize(l+1, axis=0)
+                        if ((key == "eddy_i") | (key == "eddy_j")):
+                            l2 = det_eddies[next_eddy][key][()].shape[0]
+                            tracks[ee][key].resize(l2, axis=1)
+                            tracks[ee][key][-1, :] = det_eddies[next_eddy][key][()]
+                        else:
+                            tracks[ee][key][-1] = det_eddies[next_eddy][key][()]
                 # Remove detected eddy from list of eddies available for
                 # assigment to existing trajectories
                 unassigned.remove(next_eddy)
             # Terminate eddy if no possible candidate is found
             else:
-                tracks[ed]['terminated'] = True
-                terminated_set.add(ed)
+                if isinstance(tracks, list):
+                    tracks[int(ee)]['terminated'] = True
+                else:
+                    tracks[ee]['terminated'][()] = True
+                terminated_set.add(ee)
+                continue
     if len(unassigned) > 0:
         # If there are unassigned eddies left after looping through all tracks,
         # then make them the start of a new track.
         for un in unassigned:
-            tmp_track = {}
-            tmp_track['lon'] = np.array(det_eddies[un]['lon'])
-            tmp_track['lat'] = np.array(det_eddies[un]['lat'])
-            tmp_track['amp'] = np.array(det_eddies[un]['amp'])
-            tmp_track['area'] = np.array(det_eddies[un]['area'])
-            tmp_track['scale'] = np.array(det_eddies[un]['scale'])
-            tmp_track['eddy_i'] = {}
-            tmp_track['eddy_j'] = {}
-            tmp_track['eddy_i'][0] = np.array(det_eddies[un]['eddy_i'])
-            tmp_track['eddy_j'][0] = np.array(det_eddies[un]['eddy_j'])
-            tmp_track['type'] = det_eddies[un]['type']
-            tmp_track['time'] = det_eddies[un]['time']
-            tmp_track['exist_at_start'] = False
-            tmp_track['terminated'] = False
-            tracks.append(tmp_track)
+            ee = str(len(tracks))
+            if isinstance(tracks, list):
+                tmp_track = {}
+                tmp_track['lon'] = np.array(det_eddies[un]['lon'][()])
+                tmp_track['lat'] = np.array(det_eddies[un]['lat'][()])
+                tmp_track['amp'] = np.array(det_eddies[un]['amp'][()])
+                tmp_track['area'] = np.array(det_eddies[un]['area'][()])
+                tmp_track['scale'] = np.array(det_eddies[un]['scale'][()])
+                tmp_track['eddy_i'] = {}
+                tmp_track['eddy_j'] = {}
+                tmp_track['eddy_i'][0] = np.array(det_eddies[un]['eddy_i'][()])
+                tmp_track['eddy_j'][0] = np.array(det_eddies[un]['eddy_j'][()])
+                tmp_track['type'] = det_eddies[un]['type'][()]
+                tmp_track['time'] = det_eddies[un]['time'][()]
+                tmp_track["calendar"] = det_eddies[un]['time'].attrs["calendar"]
+                tmp_track["has_year_zero"] = det_eddies[un]['time'].attrs["has_year_zero"]
+                tmp_track["units"] = det_eddies[un]['time'].attrs["units"]
+                tmp_track['exist_at_start'] = False
+                tmp_track['terminated'] = False
+                tracks.append(tmp_track)
+            else:
+                tmp_track = tracks.create_group(ee)
+                for key in det_eddies[un]:
+                    l = np.shape(det_eddies[un][key][()])
+                    max_l = trac_param["Npix_max"]
+                    if key == "time":
+                        tmp = tmp_track.create_dataset(key, (1,), maxshape=(max_l,), chunks=(1,),
+                                                   data=det_eddies[un][key][()])
+                        tmp.attrs["calendar"] = det_eddies[un][key].attrs["calendar"]
+                        tmp.attrs["has_year_zero"] = det_eddies[un][key].attrs["has_year_zero"]
+                        tmp.attrs["units"] = det_eddies[un][key].attrs["units"]
+                    elif key == "type":
+                        tmp = tmp_track.create_dataset(key, (1,), maxshape=(max_l,), chunks=(1,),
+                                                   data=det_eddies[un][key][()])
+                    elif ((key == "eddy_i") | (key == "eddy_j")):
+                        tmp = tmp_track.create_dataset(key, (1, l[0]), maxshape=(max_l, trac_param["Npix_max"]),
+                                                   chunks=(1, l[0]), data=det_eddies[un][key][()][None, :])
+                    else:
+                        tmp = tmp_track.create_dataset(key, l, maxshape=(max_l,), chunks=l,
+                                                   data=det_eddies[un][key][()])
+                tmp = tmp_track.create_dataset('exist_at_start', (1), data=False)
+                tmp = tmp_track.create_dataset('terminated', (1), data=False)
 
 
-def track(tracking_params, in_file=True):
+def track(tracking_params, in_file=True, hdf5_in=False, hdf5_out=True):
     ''' Eddy tracking based on similarity
 
     Parameters
@@ -942,66 +1202,7 @@ def track(tracking_params, in_file=True):
     eddies_time, rossrad, trac_param = prepare(tracking_params)
     # Initialize `tracks` with all eddies at t=0
     terminated_set = set()
-    tracks = []
-    if in_file:
-        t = 0
-        didntwork = True
-        while didntwork:
-            try:
-                firstdate = str(eddies_time[t])[0:10]
-                os.path.isfile(glob(trac_param['data_path']
-                               + trac_param['file_root'] + '_'
-                               + str(firstdate) + '_'
-                               + trac_param['file_spec']
-                               + '.pickle')[0])
-                didntwork = False
-            except:
-                t += 1
-                didntwork = True
-                if t > len(eddies_time):
-                    break
-        if didntwork:
-            print('no eddies found to track')
-            return
-        datestring = firstdate
-        with open(glob(trac_param['data_path'] + trac_param['file_root'] + '_'
-                  + str(firstdate) + '_' + trac_param['file_spec']
-                  + '.pickle')[0],
-                  'rb') as f:
-            det_eddies = pickle.load(f)
-            for ed in np.arange(0, len(det_eddies) - 1):
-                tracks.append(det_eddies[ed].copy())
-                tracks[ed]['exist_at_start'] = True
-                tracks[ed]['terminated'] = False
-                tracks[ed]['eddy_i'] = {}
-                tracks[ed]['eddy_j'] = {}
-                tracks[ed]['eddy_i'][0] = det_eddies[ed]['eddy_i']
-                tracks[ed]['eddy_j'][0] = det_eddies[ed]['eddy_j']
-        f.close()
-    else:
-        t = 0
-        didntwork = True
-        while didntwork:
-            try:
-                firstdate = trac_param['dict'][t][0]['time']
-                didntwork = False
-            except:
-                t += 1
-                didntwork = True
-                if t > len(eddies_time):
-                    break
-        if didntwork:
-            print('no eddies found to track')
-            return
-        det_eddies = trac_param['dict'][t]
-        for ed in np.arange(0, len(det_eddies) - 1):
-            tracks.append(det_eddies[ed].copy())
-            tracks[ed]['exist_at_start'] = True
-            tracks[ed]['terminated'] = False
-            tracks[ed]['eddy_i'] = {}
-            tracks[ed]['eddy_j'] = {}
-            tracks[ed]['eddy_i'][0] = det_eddies[ed]['eddy_i']
-            tracks[ed]['eddy_j'][0] = det_eddies[ed]['eddy_j']
+    tracks, t = init_tracks(tracking_params, eddies_time, in_file=in_file, hdf5_in=hdf5_in, hdf5_out=hdf5_out)
     terminate_all = False
     for tt in np.arange(t + 1, len(eddies_time)):
         steps = np.around(np.linspace(0, len(eddies_time), 10))
@@ -1009,52 +1210,105 @@ def track(tracking_params, in_file=True):
             print('tracking at time step ', str(tt + 1), ' of ',
                   len(eddies_time))
         if in_file:
-            nextdate = str(eddies_time[tt])[0:10]
-            file_found = os.path.isfile(glob(trac_param['data_path']
-                             + trac_param['file_root'] + '_'
-                             + str(nextdate) + '_'
-                             + trac_param['file_spec']
-                             + '.pickle')[0])
-            if file_found:
-                terminate_all = False
+            if hdf5_in:
+                nextdate = str(eddies_time[tt])[0:10]
+                with h5py.File(glob(trac_param['data_path']
+                                    + trac_param['file_root'] + '_'
+                                    + trac_param['file_spec']
+                                    + '.hdf5')[0], 'r') as filehdf:
+                    try:
+                        t_in = filehdf[nextdate]
+                    except:
+                        terminate_all = True
+                filehdf.close()
             else:
-                terminate_all = True
+                nextdate = str(eddies_time[tt])[0:10]
+                file_found = os.path.isfile(glob(trac_param['data_path']
+                                 + trac_param['file_root'] + '_'
+                                 + str(nextdate) + '_'
+                                 + trac_param['file_spec']
+                                 + '.pickle')[0])
+                if file_found:
+                    terminate_all = False
+                else:
+                    terminate_all = True
         else:
+            if hdf5_in:
+                print("hdf5 only works together with in_file=True")
+                #return
             try:
                 trac_param['dict'][tt][0]['time']
             except:
                 terminate_all = True
         if terminate_all:
             for ed in range(len(tracks)):
-                tracks[ed]['terminated'] = True
+                ee = str(ed)
+                if hdf5_out:
+                    tracks[ee]['terminated'][()] = True
+                else:
+                    tracks[ed]['terminated'] = True
                 terminated_set.add(ed)
             continue
         # Loop through all time steps in `det_eddies`
         if in_file:
+            if hdf5_in:
+                datestring = str(eddies_time[tt])[0:10]
+                with h5py.File(glob(trac_param['data_path']
+                                    + trac_param['file_root'] + '_'
+                                    + trac_param['file_spec']
+                                    + '.hdf5')[0], 'r') as filehdf:
+                    det_eddies = filehdf[datestring]
+                    track_core(det_eddies, tracks, trac_param,
+                               terminated_set, rossrad)
+                filehdf.close()
+            else:
+                datestring = str(eddies_time[tt])[0:10]
+                with open(glob(trac_param['data_path'] + trac_param['file_root']
+                          + '_' + str(datestring) + '_' + trac_param['file_spec']
+                          + '.pickle')[0],
+                          'rb') as f:
+                    tmp_eddies = pickle.load(f)
+                    with tools.dict2hdf5(tmp_eddies, "det_eddies.hdf5", trac_param['time_units'],
+                                            trac_param['calendar'], trac_param['has_year_zero']) as d_eddies:
+                        det_eddies = d_eddies[datestring]
+                        track_core(det_eddies, tracks, trac_param,
+                                   terminated_set, rossrad)
+                    d_eddies.close()
+                    os.remove("det_eddies.hdf5")
+                f.close()
+        else:
+            if hdf5_in:
+                print("hdf5 only works together with in_file=True")
+                #return
             datestring = str(eddies_time[tt])[0:10]
-            with open(glob(trac_param['data_path'] + trac_param['file_root']
-                      + '_' + str(datestring) + '_' + trac_param['file_spec']
-                      + '.pickle')[0],
-                      'rb') as f:
-                det_eddies = pickle.load(f)
+            tmp_eddies = trac_param['dict'][tt]
+            with tools.dict2hdf5(tmp_eddies, "det_eddies.hdf5", trac_param['time_units'],
+                                            trac_param['calendar'], trac_param['has_year_zero']) as d_eddies:
+                det_eddies = d_eddies[datestring]
                 track_core(det_eddies, tracks, trac_param,
                            terminated_set, rossrad)
-            f.close()
-        else:
-            det_eddies = trac_param['dict'][tt]
-            track_core(det_eddies, tracks, trac_param,
-                       terminated_set, rossrad)
+            d_eddies.close()
+            os.remove("det_eddies.hdf5")
         terminate_all = False
-    # Now remove all tracks of length 1 from `tracks` (a track is only
-    # considered as such, if the eddy can be tracked over at least 2
-    # consecutive time steps)
-    tracks_list = []
-    td_index = 0
-    for ed in np.arange(0, len(tracks)):
-        if len(tracks[ed]['lon']) > 1:
-            tracks_list.append(tracks[ed])
-            td_index = td_index + 1
-    return tracks_list
+    if hdf5_out:
+        tracks.close()
+        with h5py.File(trac_param['tracksfile'], 'w') as final_tracks:
+            with h5py.File('tmp_tracks.hdf5', 'r') as tracks:
+                ednew = 0
+                for ed in range(len(tracks)):
+                    ee = str(ed)
+                    eenew = str(ednew)
+                    if len(tracks[ee]['lon'][()]) > 1:
+                        tracks[ee].copy(tracks[ee], final_tracks["/"], str(eenew))
+                        ednew += 1
+            tracks.close()
+        os.remove('tmp_tracks.hdf5')
+    else:
+        final_tracks = []
+        for ed in np.arange(0, len(tracks)):
+            if len(tracks[ed]['lon']) > 1:
+                final_tracks.append(tracks[ed])
+    return final_tracks
 
 
 def split_track(tracking_params, in_file=True, continuing=False,
