@@ -15,6 +15,7 @@ import xarray as xr
 import pickle
 import cftime as cft
 from glob import glob
+import h5py
 from . import tools
 
 
