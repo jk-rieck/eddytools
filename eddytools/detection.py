@@ -555,8 +555,7 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                 # assign (and calculated) area, and scale of eddies
                 eddi['area'] = np.array([((e1f.values[index] / 1000.)
                                          * (e2f.values[index] / 1000.)).sum()])
-                eddi['scale'] = np.array([np.sqrt(eddi['area'][:]
-                                         / np.pi)])  # [km]
+                eddi['scale'] = np.sqrt(eddi['area'][:] / np.pi)  # [km]
                 # get eddy type from Vorticity and store extrema
                 if det_param['grid'] == 'latlon':
                     if eddi['lat'][:] < 0:
@@ -586,8 +585,7 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
                 # assign (and calculated) area, and scale of eddies
                 eddi[e]['area'] = np.array([((e1f.values[index] / 1000.)
                     * (e2f.values[index] / 1000.)).sum()])
-                eddi[e]['scale'] = np.array(np.sqrt(eddi[e]['area']
-                                             / np.pi))  # [km]
+                eddi[e]['scale'] = np.sqrt(eddi[e]['area'] / np.pi)  # [km]
                 # get eddy type from Vorticity and store extrema
                 if det_param['grid'] == 'latlon':
                     if eddi[e]['lat'] < 0:

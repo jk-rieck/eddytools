@@ -1224,11 +1224,14 @@ def track(tracking_params, in_file=True, hdf5_in=False, hdf5_out=True):
                 filehdf.close()
             else:
                 nextdate = str(eddies_time[tt])[0:10]
-                file_found = os.path.isfile(glob(trac_param['data_path']
-                                 + trac_param['file_root'] + '_'
-                                 + str(nextdate) + '_'
-                                 + trac_param['file_spec']
-                                 + '.pickle')[0])
+                try:
+                    file_found = os.path.isfile(glob(trac_param['data_path']
+                        + trac_param['file_root'] + '_'
+                        + str(nextdate) + '_'
+                        + trac_param['file_spec']
+                        + '.pickle')[0])
+                except:
+                    file_found = False
                 if file_found:
                     terminate_all = False
                 else:
