@@ -803,6 +803,13 @@ def init_tracks(trac_param, eddies_time, in_file, hdf5_in, hdf5_out):
                             tmp = track.create_dataset('terminated', (1), data=False)
                         else:
                             tracks.append(tmp_eddies[ed].copy())
+                            tracks[ed]['time'] = det_eddies[ee]['time'][()]
+                            tracks[ed]["calendar"] =\
+                                det_eddies[ee]['time'].attrs["calendar"]
+                            tracks[ed]["has_year_zero"] =\
+                                det_eddies[ee]['time'].attrs["has_year_zero"]
+                            tracks[ed]["units"] = \
+                                det_eddies[ee]['time'].attrs["units"]
                             tracks[ed]['exist_at_start'] = True
                             tracks[ed]['terminated'] = False
                             tracks[ed]['eddy_i'] = {}
@@ -859,6 +866,13 @@ def init_tracks(trac_param, eddies_time, in_file, hdf5_in, hdf5_out):
                     tmp = track.create_dataset('terminated', (1), data=False)
                 else:
                     tracks.append(tmp_eddies[ed].copy())
+                    tracks[ed]['time'] = det_eddies[ee]['time'][()]
+                    tracks[ed]["calendar"] =\
+                        det_eddies[ee]['time'].attrs["calendar"]
+                    tracks[ed]["has_year_zero"] =\
+                        det_eddies[ee]['time'].attrs["has_year_zero"]
+                    tracks[ed]["units"] = \
+                        det_eddies[ee]['time'].attrs["units"]
                     tracks[ed]['exist_at_start'] = True
                     tracks[ed]['terminated'] = False
                     tracks[ed]['eddy_i'] = {}

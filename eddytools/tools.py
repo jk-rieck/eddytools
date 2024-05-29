@@ -20,7 +20,7 @@ def dict2hdf5(eddies, outfile, time_units, calendar, has_year_zero, t_dim=False)
                 ee = str(e)
                 eddi = eddit.create_group(ee)
                 if isinstance(eddies[t][e]['time'], np.datetime64):
-                    e_time = eddies[t][e]['time'].astype(int)
+                    e_time = int(eddies[t][e]['time'])
                 else:
                     e_time = d2n(eddies[t][e]['time'], time_units,
                                  calendar=calendar, has_year_zero=has_year_zero)
@@ -43,7 +43,7 @@ def dict2hdf5(eddies, outfile, time_units, calendar, has_year_zero, t_dim=False)
             ee = str(e)
             eddi = eddit.create_group(ee)
             if isinstance(eddies[e]['time'], np.datetime64):
-                e_time = eddies[e]['time'].astype(int)
+                e_time = int(eddies[e]['time'])
             else:
                 e_time = d2n(eddies[e]['time'], time_units,
                              calendar=calendar, has_year_zero=has_year_zero)

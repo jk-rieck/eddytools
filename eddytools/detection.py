@@ -479,14 +479,20 @@ def detect_OW_core(data, det_param, OW, vort, t, OW_thr, e1f, e2f,
             # If the region is not too small and not too big, extract
             # eddy information
             if hdf5_out:
-                e_time = cft.date2num(OW.isel(time=t)['time'].values,
-                                      det_param["time_units"],
-                                      calendar=det_param["calendar"],
-                                      has_year_zero=det_param["has_year_zero"])
+                if isinstance(OW.isel(time=t)['time'].values, np.datetime64):
+                    e_time = int(OW.isel(time=t)['time'].values)
+                    time_units = 'ns'
+                else:
+                    e_time = cft.date2num(
+                        OW.isel(time=t)['time'].values,
+                        det_param["time_units"],
+                        calendar=det_param["calendar"],
+                        has_year_zero=det_param["has_year_zero"])
+                    time_units = det_param["time_units"]
                 eddi["time"] = e_time
                 eddi["time"].attrs["calendar"] = det_param["calendar"],
                 eddi["time"].attrs["has_year_zero"] = det_param["has_year_zero"]
-                eddi["time"].attrs["units"] = det_param["time_units"]
+                eddi["time"].attrs["units"] = time_units
             else:
                 eddi[e]['time'] = OW.isel(time=t)['time'].values
             # find centre of mass of eddy
@@ -809,15 +815,22 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
                     eddy_mask[interior.astype(int)==1] = np.nan
                     field = field * eddy_mask
                     if hdf5_out:
-                        e_time = cft.date2num(OW.isel(time=t)['time'].values,
-                            det_param["time_units"],
-                            calendar=det_param["calendar"],
-                            has_year_zero=det_param["has_year_zero"])
+                        if isinstance(OW.isel(time=t)['time'].values,
+                                      np.datetime64):
+                            e_time = int(OW.isel(time=t)['time'].values)
+                            time_units = 'ns'
+                        else:
+                            e_time = cft.date2num(
+                                OW.isel(time=t)['time'].values,
+                                det_param["time_units"],
+                                calendar=det_param["calendar"],
+                                has_year_zero=det_param["has_year_zero"])
+                            time_units = det_param["time_units"]
                         eddi["time"] = e_time
-                        eddi["time"].attrs["calendar"] = det_param["calendar"]
-                        eddi["time"].attrs["has_year_zero"] = det_param["has_"
-                                                                + "year_zero"]
-                        eddi["time"].attrs["units"] = det_param["time_units"]
+                        eddi["time"].attrs["calendar"] = det_param["calendar"],
+                        eddi["time"].attrs["has_year_zero"] =\
+                            det_param["has_year_zero"]
+                        eddi["time"].attrs["units"] = time_units
                         eddi['amp'] = np.array([amp])
                         eddi['area'] = np.array([area])
                         eddi['scale'] = np.array([scale])
