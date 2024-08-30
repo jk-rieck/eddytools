@@ -967,7 +967,6 @@ def track(tracking_params, in_file=True):
             try:
                 if not trac_param['detection_is_saved_monthly_files']:
                     firstdate = str(eddies_time[t])[0:10]
-                    print(firstdate)               
                     os.path.isfile(glob(trac_param['data_path']
                                + trac_param['file_root'] + '_'
                                + str(firstdate) + '_'
@@ -976,7 +975,6 @@ def track(tracking_params, in_file=True):
                     didntwork = False
                 else: 
                     firstdate = str(eddies_time[t])[0:4] +'_'+str(eddies_time[t])[5:7]
-                    print(firstdate)
                     os.path.isfile(glob(trac_param['data_path']
                                + trac_param['file_root'] + '_'
                                + str(firstdate) + '_'
@@ -996,7 +994,10 @@ def track(tracking_params, in_file=True):
                   + str(firstdate) + '_' + trac_param['file_spec']
                   + '.pickle')[0],
                   'rb') as f:
-            det_eddies = pickle.load(f)
+            if not trac_param['detection_is_saved_monthly_files']:
+                det_eddies = pickle.load(f)
+            else:
+                det_eddies = pickle.load(f)[0]
             for ed in np.arange(0, len(det_eddies) - 1):
                 tracks.append(det_eddies[ed].copy())
                 tracks[ed]['exist_at_start'] = True
@@ -1009,6 +1010,7 @@ def track(tracking_params, in_file=True):
         f.close()
     else:
         t = 0
+        print('This option is not configured for monthly savings of detection')
         didntwork = True
         while didntwork:
             try:
@@ -1040,11 +1042,18 @@ def track(tracking_params, in_file=True):
                   len(eddies_time))
         if in_file:
             nextdate = str(eddies_time[tt])[0:10]
-            file_found = len(glob(trac_param['data_path']
-                             + trac_param['file_root'] + '_'
-                             + str(nextdate) + '_'
-                             + trac_param['file_spec']
-                             + '.pickle'))>0
+            if not trac_param['detection_is_saved_monthly_files']:
+                file_found = len(glob(trac_param['data_path']
+                                + trac_param['file_root'] + '_'
+                                + str(nextdate) + '_'
+                                + trac_param['file_spec']
+                                + '.pickle'))>0
+            else:
+                 file_found = len(glob(trac_param['data_path']
+                                + trac_param['file_root'] + '_'
+                                + str(nextdate)[:4]+'_'+str(nextdate)[5:7] + '_'
+                                + trac_param['file_spec']
+                                + '.pickle'))>0               
             if file_found:
                 terminate_all = False
             else:
@@ -1059,17 +1068,29 @@ def track(tracking_params, in_file=True):
                 tracks[ed]['terminated'] = True
                 terminated_set.add(ed)
             continue
-        # Loop through all time steps in `det_eddies`
+        # Loop through all time steps in `det_eddies` NP : times steps in 'eddies_time' ? 
         if in_file:
             datestring = str(eddies_time[tt])[0:10]
-            with open(glob(trac_param['data_path'] + trac_param['file_root']
-                      + '_' + str(datestring) + '_' + trac_param['file_spec']
-                      + '.pickle')[0],
-                      'rb') as f:
-                det_eddies = pickle.load(f)
-                track_core(det_eddies, tracks, trac_param,
-                           terminated_set, rossrad)
-            f.close()
+            if not trac_param['detection_is_saved_monthly_files']:
+                with open(glob(trac_param['data_path'] + trac_param['file_root']
+                        + '_' + str(datestring) + '_' + trac_param['file_spec']
+                        + '.pickle')[0],
+                        'rb') as f:
+                    det_eddies = pickle.load(f)
+                    track_core(det_eddies, tracks, trac_param,
+                            terminated_set, rossrad)
+                f.close()
+            else:
+                with open(glob(trac_param['data_path'] + trac_param['file_root']
+                        + '_' + str(datestring)[:4]+'_'+str(datestring)[5:7] + '_' + trac_param['file_spec']
+                        + '.pickle')[0],
+                        'rb') as f:
+                    day = int(datestring[8:10])
+                    det_eddies = pickle.load(f)[day-1]
+                    track_core(det_eddies, tracks, trac_param,
+                            terminated_set, rossrad)
+                f.close()
+
         else:
             det_eddies = trac_param['dict'][tt]
             track_core(det_eddies, tracks, trac_param,
