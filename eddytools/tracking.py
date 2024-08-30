@@ -965,20 +965,29 @@ def track(tracking_params, in_file=True):
         didntwork = True
         while didntwork:
             try:
-                firstdate = str(eddies_time[t])[0:10]
-                os.path.isfile(glob(trac_param['data_path']
+                if not trac_param['detection_is_saved_monthly_files']:
+                    firstdate = str(eddies_time[t])[0:10]
+                    os.path.isfile(glob(trac_param['data_path']
                                + trac_param['file_root'] + '_'
                                + str(firstdate) + '_'
                                + trac_param['file_spec']
                                + '.pickle')[0])
-                didntwork = False
+                    didntwork = False
+                else: 
+                    firstdate = str(eddies_time[t])[0:4] +'_'+str(eddies_time[t])[5:7]
+                    os.path.isfile(glob(trac_param['data_path']
+                               + trac_param['file_root'] + '_'
+                               + str(firstdate) + '_'
+                               + trac_param['file_spec']
+                               + '.pickle')[0])
+                    didntwork = False                    
             except:
                 t += 1
                 didntwork = True
                 if t > len(eddies_time):
                     break
         if didntwork:
-            print('no eddies found to track')
+            print('no eddies found to track with regular day naming yyyy-mm-dd or yyyy_mm')
             return
         datestring = firstdate
         with open(glob(trac_param['data_path'] + trac_param['file_root'] + '_'
