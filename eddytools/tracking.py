@@ -967,6 +967,7 @@ def track(tracking_params, in_file=True):
             try:
                 if not trac_param['detection_is_saved_monthly_files']:
                     firstdate = str(eddies_time[t])[0:10]
+                    print(firstdate)               
                     os.path.isfile(glob(trac_param['data_path']
                                + trac_param['file_root'] + '_'
                                + str(firstdate) + '_'
@@ -975,6 +976,7 @@ def track(tracking_params, in_file=True):
                     didntwork = False
                 else: 
                     firstdate = str(eddies_time[t])[0:4] +'_'+str(eddies_time[t])[5:7]
+                    print(firstdate)
                     os.path.isfile(glob(trac_param['data_path']
                                + trac_param['file_root'] + '_'
                                + str(firstdate) + '_'
