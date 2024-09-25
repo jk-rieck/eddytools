@@ -11,6 +11,9 @@ from scipy import ndimage
 from scipy.signal import find_peaks
 import cftime as cft
 import itertools
+from scipy import interpolate
+from contourpy import contour_generator
+from scipy.spatial import ConvexHull
 try:
     import multiprocessing as mp
 except:
