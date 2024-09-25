@@ -215,7 +215,6 @@ def distance_matrix(lons, lats):
         d: Matrix with the distance from Point (lons[x],lats[x]) to every other
            Point (lons[y],lats[y]).
     '''
-
     EARTH_RADIUS = 6378.1
     X = len(lons)
     Y = len(lats)
@@ -1012,7 +1011,7 @@ def detect_SSH(data, det_param, ssh_var,
     e2f = maskandcut(data, e2f_name, det_param)
     ## create list of incremental threshold
     ssh_crits = np.arange(-det_param['ssh_thr'],
-                          det_param['ssh_thr'] + det_param['dssh'] / 2,
+                          det_param['ssh_thr'] + det_param['dssh'],
                           det_param['dssh'])
     ssh_crits = np.sort(ssh_crits) # make sure its increasing order
     if use_mp:
