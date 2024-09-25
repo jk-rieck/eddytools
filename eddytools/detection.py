@@ -567,17 +567,15 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
         raise ValueError("regrid_avoided cannot be used in combination"
                          + "with detection based on SSH (yet).")
     #set up grid
-    len_deg_lat = 111.325 # length of 1 degree of latitude [km]
     llon, llat = np.meshgrid(SSH.lon, SSH.lat)
-    ssh_crits = ssh_crits[ssh_crits >= det_param['ssh_thr']]
     # initialise eddy counter & output dict
     e = 0
     eddi = {}
-    for cyc in ['anticyclonic', 'cyclonic']:
+    for cyc in ['cyclonic', 'anticyclonic']:
         field = SSH.isel(time=t).values
         # ssh_crits increasing for 'anticyclonic', decreasing for 'cyclonic'
         # flip to start with largest positive value for 'cylonic'
-        if cyc == 'cyclonic':
+        if cyc == 'anticyclonic':
             ssh_crits = -ssh_crits
         # loop over ssh_crits and remove interior pixels of detected eddies
         # from subsequent loop steps
@@ -654,10 +652,13 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
                                            SSH['lon'].values)
                     lat_eddies = np.interp(j_cen, range(0, len(SSH['lat'])),
                                            SSH['lat'].values)
-                    if lon_eddies > 180:
-                        eddi[e]['lon'] = np.array([lon_eddies]) - 360.
-                    elif lon_eddies < -180:
-                        eddi[e]['lon'] = np.array([lon_eddies]) + 360.
+                    if det_param['grid'] == 'latlon':
+                        if lon_eddies > 180:
+                            eddi[e]['lon'] = np.array([lon_eddies]) - 360.
+                        elif lon_eddies < -180:
+                            eddi[e]['lon'] = np.array([lon_eddies]) + 360.
+                        else:
+                            eddi[e]['lon'] = np.array([lon_eddies])
                     else:
                         eddi[e]['lon'] = np.array([lon_eddies])
                     eddi[e]['lat'] = np.array([lat_eddies])
@@ -670,10 +671,8 @@ def detect_SSH_core(data, det_param, SSH, t, ssh_crits, e1f, e2f,
                     eddi[e]['eddy_i'] = index[1] + i_min
                     # assign (and calculated) amplitude, area, and scale of
                     # eddies
-                    len_deg_lon = ((np.pi/180.) * 6371
-                                   * np.cos( lat_eddies * np.pi/180. )) #[km]
                     area = (region_Npix * det_param['res'] ** 2
-                            * len_deg_lat * len_deg_lon)
+                            * e2f * e1f)
                     # [km**2]
                     scale = np.sqrt(area / np.pi) # [km]
                     # remove its interior pixels from further eddy detection
