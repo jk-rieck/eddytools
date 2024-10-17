@@ -1030,8 +1030,8 @@ def detect_UV_core(data, det_param, U, V, SPEED, t, e1f, e2f,
                                 eddi[e] = {}
                                 eddi[e]["lon"] = slon[X, Y]
                                 eddi[e]["lat"] = slat[X, Y]
-                                eddi[e]['eddy_j'] = eddy_j + i2
-                                eddi[e]['eddy_i'] = eddy_i + i1
+                                eddi[e]['eddy_j'] = eddy_j + int(max(i2-(rad*a), 1))
+                                eddi[e]['eddy_i'] = eddy_i + int(max(i1-(rad*a), 1))
                                 eddi[e]['time'] = U.isel(time=t).time.values
                                 eddi[e]['amp'] = np.array([np.nanmax(psi * eddy_mask) - np.nanmin(psi * eddy_mask)])
                                 area = (e1f_large / 1000.) * (e2f_large / 1000.) * eddy_mask
