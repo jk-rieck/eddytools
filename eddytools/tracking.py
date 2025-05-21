@@ -998,6 +998,7 @@ def track(tracking_params, in_file=True):
                 det_eddies = pickle.load(f)
             else:
                 det_eddies = pickle.load(f)[0]
+                print(det_eddies)
             for ed in np.arange(0, len(det_eddies) - 1):
                 tracks.append(det_eddies[ed].copy())
                 tracks[ed]['exist_at_start'] = True
@@ -1048,12 +1049,19 @@ def track(tracking_params, in_file=True):
                                 + str(nextdate) + '_'
                                 + trac_param['file_spec']
                                 + '.pickle'))>0
-            else:
-                 file_found = len(glob(trac_param['data_path']
+            else: #NP : modified so that if one day has no eddies it terminate_all automaticaly. 
+                if len(glob(trac_param['data_path']
                                 + trac_param['file_root'] + '_'
                                 + str(nextdate)[:4]+'_'+str(nextdate)[5:7] + '_'
                                 + trac_param['file_spec']
-                                + '.pickle'))>0               
+                                + '.pickle'))>0:
+                    with open(glob(trac_param['data_path'] + trac_param['file_root']
+                        + '_' + str(eddies_time[tt])[:4]+'_'+str(eddies_time[tt])[5:7] + '_' + trac_param['file_spec']
+                        + '.pickle')[0],
+                        'rb') as f:
+                        day = int(eddies_time[tt][8:10])
+                        det_eddies = pickle.load(f)[day-1]
+                        file_found = len(det_eddies)>=1           
             if file_found:
                 terminate_all = False
             else:
